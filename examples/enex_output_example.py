@@ -129,14 +129,18 @@ def main():
         file_path = note_info['file_path']
         try:
             # Process markdown to HTML to ENML
-            processed_markdown, resources = process_markdown_file(file_path, config.to_dict())
+            processed_markdown, resources, frontmatter = process_markdown_file(file_path, config.to_dict())
             all_resources.update(resources)
             
             html_content = convert_markdown_to_html(processed_markdown, config.to_dict())
             enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict())
             
-            # Extract metadata
+            # Extract metadata from file
             metadata = extract_note_metadata(file_path, processed_markdown, config.to_dict())
+            
+            # Add frontmatter metadata (it takes precedence)
+            for key, value in frontmatter.items():
+                metadata[key] = value
             
             # Create note object
             title = metadata.get("title", Path(file_path).stem)
@@ -183,7 +187,7 @@ def main():
             
             # Get resources for this note
             file_path = note_info['file_path']
-            _, note_resources = process_markdown_file(file_path, config.to_dict())
+            _, note_resources, _ = process_markdown_file(file_path, config.to_dict())
             
             # Add resources to note
             note_resource_objects = []

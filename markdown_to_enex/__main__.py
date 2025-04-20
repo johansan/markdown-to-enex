@@ -127,8 +127,9 @@ def main():
             
             try:
                 # Process markdown
-                processed_markdown, resources = process_markdown_file(test_file, config.to_dict())
+                processed_markdown, resources, frontmatter = process_markdown_file(test_file, config.to_dict())
                 print(f"Processed markdown and found {len(resources)} resource references")
+                print(f"Extracted metadata: {frontmatter}")
                 
                 # Convert to HTML
                 html_content = convert_markdown_to_html(processed_markdown, config.to_dict())
@@ -227,7 +228,7 @@ def main():
             
             # Process markdown
             try:
-                processed_markdown, resources = process_markdown_file(file_path, config.to_dict())
+                processed_markdown, resources, frontmatter = process_markdown_file(file_path, config.to_dict())
                 
                 # Track all resources
                 all_resources.update(resources)
@@ -239,8 +240,24 @@ def main():
                 # Process HTML to ENML
                 enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict())
                 
-                # Extract metadata
+                # Extract metadata from file
                 metadata = extract_note_metadata(file_path, processed_markdown, config.to_dict())
+                
+                # Override with frontmatter metadata (it takes precedence)
+                for key, value in frontmatter.items():
+                    # Special handling for string dates that didn't parse properly
+                    if key in ('created', 'updated', 'date') and isinstance(value, str):
+                        try:
+                            # Try to use the ENEX generator's date parser
+                            from .enex_generator import ENEXGenerator
+                            generator = ENEXGenerator(config.to_dict())
+                            parsed_date = generator._parse_date(value)
+                            metadata[key] = parsed_date
+                        except Exception:
+                            # If parsing fails, keep the string value
+                            metadata[key] = value
+                    else:
+                        metadata[key] = value
                 
                 # Create a note object
                 title = metadata.get("title", Path(file_path).stem)

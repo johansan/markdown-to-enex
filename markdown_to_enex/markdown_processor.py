@@ -17,17 +17,20 @@ class MarkdownProcessor:
         self.resources_dir = config.get("resources_directory", "_resources")
         self.image_references: Set[str] = set()
         
-    def process_markdown(self, content: str) -> str:
+    def process_markdown(self, content: str) -> Tuple[str, Dict[str, Any]]:
         """Process markdown content applying all transformations.
         
         Args:
             content: The markdown content to process
             
         Returns:
-            The processed markdown content
+            Tuple of (processed content, extracted frontmatter metadata)
         """
+        # First extract frontmatter if present
+        content_without_frontmatter, metadata = self.extract_frontmatter(content)
+        
         # Apply transformations in sequence
-        result = content
+        result = content_without_frontmatter
         
         # Remove code block markers
         if self.processing_options.get("remove_code_block_markers", True):
@@ -53,7 +56,65 @@ class MarkdownProcessor:
         if self.processing_options.get("handle_special_chars", True):
             result = self.handle_special_characters(result)
             
-        return result
+        return result, metadata
+        
+    def extract_frontmatter(self, content: str) -> Tuple[str, Dict[str, Any]]:
+        """Extract frontmatter metadata from content.
+        
+        Args:
+            content: Markdown content possibly containing frontmatter
+            
+        Returns:
+            Tuple of (content without frontmatter, extracted metadata)
+        """
+        metadata = {}
+        content_without_frontmatter = content
+        
+        # Check if content has frontmatter (surrounded by --- markers)
+        frontmatter_pattern = r'^---\s*\n(.*?)\n---\s*\n'
+        frontmatter_match = re.search(frontmatter_pattern, content, re.DOTALL)
+        
+        if frontmatter_match:
+            # Extract the frontmatter content
+            frontmatter_content = frontmatter_match.group(1)
+            
+            # Remove the frontmatter from the content
+            content_without_frontmatter = content[frontmatter_match.end():]
+            
+            # Parse the frontmatter content (simple key-value pairs)
+            for line in frontmatter_content.split('\n'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip().lower()
+                    value = value.strip()
+                    
+                    # Handle special keys
+                    if key in ('created', 'updated', 'date'):
+                        # Try to parse date strings to datetime
+                        try:
+                            # Import here to avoid circular imports
+                            from datetime import datetime
+                            
+                            # Try common formats
+                            for fmt in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d', '%d/%m/%Y', '%B %d, %Y', '%d %B %Y'):
+                                try:
+                                    metadata[key] = datetime.strptime(value, fmt)
+                                    break
+                                except ValueError:
+                                    continue
+                            else:
+                                # If no format worked, store as string
+                                metadata[key] = value
+                        except Exception:
+                            # If parsing fails, just store the string
+                            metadata[key] = value
+                    # Handle lists (comma-separated values)
+                    elif ',' in value and key in ('tags', 'keywords', 'categories'):
+                        metadata[key] = [item.strip() for item in value.split(',')]
+                    else:
+                        metadata[key] = value
+        
+        return content_without_frontmatter, metadata
         
     def remove_code_block_markers(self, content: str) -> str:
         """Remove code block markers (```) while preserving the code content.
@@ -238,7 +299,7 @@ class MarkdownProcessor:
 
 
 # Function to process a markdown file
-def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, Set[str]]:
+def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, Set[str], Dict[str, Any]]:
     """Process a markdown file applying transformations.
     
     Args:
@@ -246,16 +307,16 @@ def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, 
         config: Configuration dictionary
         
     Returns:
-        Tuple of (processed_content, resource_references)
+        Tuple of (processed_content, resource_references, frontmatter_metadata)
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
             
         processor = MarkdownProcessor(config)
-        processed_content = processor.process_markdown(content)
+        processed_content, frontmatter_metadata = processor.process_markdown(content)
         
-        return processed_content, processor.get_resource_references()
+        return processed_content, processor.get_resource_references(), frontmatter_metadata
         
     except Exception as e:
         raise RuntimeError(f"Error processing markdown file {file_path}: {e}")

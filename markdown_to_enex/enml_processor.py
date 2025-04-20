@@ -77,8 +77,12 @@ class ENMLProcessor:
         # Process image references
         processed_html = self._process_image_references(cleaned_html)
         
-        # Wrap in en-note
-        enml_content = f'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n<en-note>{processed_html}</en-note>'
+        # Convert to Evernote-style formatting
+        processed_html = self._convert_to_evernote_format(processed_html)
+        
+        # Wrap in en-note with CDATA and inner XML declaration (without linebreaks)
+        inner_xml = f'<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>{processed_html}</en-note>'
+        enml_content = f'<![CDATA[{inner_xml}]]>'
         
         # Return ENML content and resources
         return enml_content, list(self.resource_map.values())
@@ -292,6 +296,86 @@ class ENMLProcessor:
         
         return result
     
+    def _convert_to_evernote_format(self, html_content: str) -> str:
+        """Convert HTML to Evernote's specific format.
+        
+        Args:
+            html_content: HTML content to convert
+            
+        Returns:
+            Converted HTML in Evernote's format
+        """
+        # 1. Convert paragraph tags to div tags (but keep list items as-is)
+        result = re.sub(r'<p>(.*?)</p>', r'<div>\1</div>', html_content, flags=re.DOTALL)
+        
+        # 2. Convert plain URLs to hyperlinks
+        # Find URLs not already in hyperlinks
+        def url_to_link(match):
+            url = match.group(0)
+            # Don't convert if already inside a link or HTML tag
+            pre_char = match.string[max(0, match.start() - 1):match.start()]
+            if pre_char == '"' or pre_char == "'":
+                return url
+            return f'<a href="{url}" rev="en_rl_none">{url}</a>'
+            
+        # Match URLs not already in a link
+        url_pattern = r'(?<!["\'=])(https?://[^\s<>"\']+)'
+        result = re.sub(url_pattern, url_to_link, result)
+        
+        # 3. Add proper <br/> spacing between content blocks
+        # Add <div><br/></div> after each </div> if not followed by another tag
+        result = re.sub(r'</div>(?!\s*<)', r'</div><div><br/></div>', result)
+        
+        # 4. Process markdown image references for remaining unprocessed images
+        # Look for markdown style images: ![[path/to/image.jpg]]
+        def replace_markdown_image(match):
+            img_path = match.group(1)
+            resource_info = None
+            
+            # Try to find resource in our resource map
+            for ref, info in self.resource_map.items():
+                if Path(ref).name == Path(img_path).name:
+                    resource_info = info
+                    break
+            
+            if resource_info:
+                # Calculate image dimensions (default to 440x440 like in the example)
+                width = "440px"
+                height = "440px"
+                alt = Path(img_path).stem.replace('_', ' ')
+                
+                return f'<en-media style="--en-naturalWidth:440; --en-naturalHeight:440;" ' \
+                       f'alt="{alt}" height="{height}" width="{width}" ' \
+                       f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+            else:
+                return f'<div>[Image not found: {html.escape(img_path)}]</div>'
+                
+        result = re.sub(r'!\[\[([^\]]+)\]\]', replace_markdown_image, result)
+        
+        # 5. Add a <div><br/></div> at the beginning if not already present
+        if not result.startswith('<div><br/></div>'):
+            result = '<div><br/></div>' + result
+        
+        # 6. Add a <div><br/></div> at the end if not already present
+        if not result.endswith('<div><br/></div>'):
+            result = result + '<div><br/></div>'
+            
+        # 7. Remove any metadata block at the beginning (content between --- markers)
+        result = re.sub(r'<div>-{3,}</div>.*?<div>-{3,}</div>', '<div><br/></div>', result, flags=re.DOTALL)
+            
+        # Final clean-up
+        # Remove empty divs (except those with just <br/>)
+        result = re.sub(r'<div>\s*</div>', '', result)
+        
+        # Ensure proper xml:lang attribute
+        result = re.sub(r'<([a-z0-9]+) lang=', r'<\1 xml:lang=', result)
+        
+        # Normalize whitespace and remove unnecessary line breaks for cleaner XML
+        # Remove all whitespace between tags
+        result = re.sub(r'>\s+<', '><', result, flags=re.DOTALL)
+        
+        return result
+        
     def _post_process_enml(self, enml_content: str) -> str:
         """Apply final post-processing to ENML content.
         
@@ -306,6 +390,10 @@ class ENMLProcessor:
         
         # Ensure proper xml:lang attribute
         result = re.sub(r'<([a-z0-9]+) lang=', r'<\1 xml:lang=', result)
+        
+        # Normalize whitespace and remove unnecessary line breaks for cleaner XML
+        # Remove all whitespace between tags
+        result = re.sub(r'>\s+<', '><', result, flags=re.DOTALL)
         
         return result
 

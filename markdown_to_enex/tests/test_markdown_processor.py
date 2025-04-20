@@ -193,30 +193,58 @@ class TestMarkdownProcessor(unittest.TestCase):
         
     def test_process_markdown(self):
         """Test the full markdown processing pipeline."""
-        # Create a simpler test case without code blocks to focus on other transformations
+        # Test with frontmatter
         markdown = (
+            "---\n"
+            "title: Frontmatter Test\n"
+            "created: 2023-01-01\n"
+            "tags: test, frontmatter\n"
+            "---\n\n"
             "# Main Title\n\n"
             "Here's some `code` and a [link](https://example.com).\n\n"
             "![Image](_resources/image.jpg)\n\n"
             "Special chars: <tag> — …"
         )
         
-        expected = (
+        expected_content = (
             "Main Title\n\n"
             "Here's some code and a [[link:https://example.com|link]].\n\n"
             "[[image:image.jpg|Image]]\n\n"
             "Special chars: &lt;tag&gt; --- ..."
         )
         
-        result = self.processor.process_markdown(markdown)
-        self.assertEqual(result, expected)
+        expected_metadata = {
+            "title": "Frontmatter Test",
+            "created": "2023-01-01",
+            "tags": ["test", "frontmatter"]
+        }
+        
+        result, metadata = self.processor.process_markdown(markdown)
+        self.assertEqual(result, expected_content)
         self.assertEqual(self.processor.get_resource_references(), {"image.jpg"})
+        self.assertEqual(metadata["title"], expected_metadata["title"])
+        self.assertEqual(metadata["created"], expected_metadata["created"])
+        self.assertEqual(metadata["tags"], expected_metadata["tags"])
+        
+        # Test without frontmatter
+        markdown = (
+            "# Main Title\n\n"
+            "Here's some `code` and a [link](https://example.com)."
+        )
+        
+        result, metadata = self.processor.process_markdown(markdown)
+        self.assertEqual(metadata, {})
         
     def test_process_markdown_file(self):
         """Test processing a markdown file."""
-        # Create a test markdown file without code blocks
+        # Create a test markdown file with frontmatter
         test_md_path = Path(self.temp_dir.name) / "test.md"
         test_content = (
+            "---\n"
+            "title: Test File with Frontmatter\n"
+            "created: 2023-05-15\n"
+            "tags: test, markdown, frontmatter\n"
+            "---\n\n"
             "# Test File\n\n"
             "This is a `test` file with an ![image](_resources/test.png)."
         )
@@ -225,13 +253,18 @@ class TestMarkdownProcessor(unittest.TestCase):
             f.write(test_content)
             
         # Process the file
-        processed_content, resources = process_markdown_file(str(test_md_path), self.config)
+        processed_content, resources, frontmatter = process_markdown_file(str(test_md_path), self.config)
         
         # Verify the results
         self.assertIn("Test File", processed_content)
         self.assertIn("This is a test file", processed_content)
         self.assertIn("[[image:test.png|image]]", processed_content)
         self.assertEqual(resources, {"test.png"})
+        
+        # Verify frontmatter
+        self.assertEqual(frontmatter["title"], "Test File with Frontmatter")
+        self.assertEqual(frontmatter["created"], "2023-05-15")
+        self.assertEqual(frontmatter["tags"], ["test", "markdown", "frontmatter"])
         
     def test_normalize_resource_path(self):
         """Test normalizing resource paths."""
@@ -273,7 +306,7 @@ class TestMarkdownProcessor(unittest.TestCase):
             "```\nCode block\n```"
         )
         
-        result = processor.process_markdown(markdown)
+        result, metadata = processor.process_markdown(markdown)
         
         # Code blocks, inline code, and headings should be preserved
         self.assertIn("# Title", result)
@@ -282,6 +315,9 @@ class TestMarkdownProcessor(unittest.TestCase):
         
         # But links should still be processed
         self.assertIn("[[link:url|link]]", result)
+        
+        # Metadata should be empty
+        self.assertEqual(metadata, {})
 
 
 if __name__ == "__main__":

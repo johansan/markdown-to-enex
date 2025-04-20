@@ -239,12 +239,8 @@ class ENEXGenerator:
             
         note_xml += "    </note-attributes>\n"
         
-        # Add content (Remove XML declaration from content)
+        # Add content directly (it should already be properly formatted with CDATA)
         content = note['content']
-        # Remove XML declaration if present
-        content = re.sub(r'<\?xml[^>]*\?>\s*', '', content)
-        # Remove DOCTYPE if present
-        content = re.sub(r'<!DOCTYPE[^>]*>\s*', '', content)
         note_xml += f"    <content>{content}</content>\n"
         
         # Add resources

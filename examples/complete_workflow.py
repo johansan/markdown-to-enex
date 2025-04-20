@@ -115,7 +115,7 @@ def main():
         
         # Process markdown
         try:
-            processed_markdown, resources = process_markdown_file(file_path, config.to_dict())
+            processed_markdown, resources, frontmatter = process_markdown_file(file_path, config.to_dict())
             
             # Track all resources
             all_resources.update(resources)
@@ -127,8 +127,12 @@ def main():
             # Process HTML to ENML
             enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict())
             
-            # Extract metadata
+            # Extract metadata from file
             metadata = extract_note_metadata(file_path, processed_markdown, config.to_dict())
+            
+            # Add frontmatter metadata (it takes precedence)
+            for key, value in frontmatter.items():
+                metadata[key] = value
             
             # Create a note object
             title = metadata.get("title", Path(file_path).stem)

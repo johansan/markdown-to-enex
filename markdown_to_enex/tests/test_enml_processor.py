@@ -135,6 +135,46 @@ class TestENMLProcessor(unittest.TestCase):
         self.assertIn('height="100"', processed)
         self.assertIn('alt="Test Image"', processed)
         
+    def test_convert_to_evernote_format(self):
+        """Test conversion to Evernote format."""
+        # Setup resource map for image tests
+        self.processor.resource_map = {
+            "test_image.png": {
+                "mime": "image/png",
+                "hash": self.test_image_hash,
+                "filename": "test_image.png"
+            }
+        }
+        
+        # Test <p> to <div> conversion
+        html = '<p>This is a paragraph.</p>'
+        result = self.processor._convert_to_evernote_format(html)
+        self.assertIn('<div>This is a paragraph.</div>', result)
+        self.assertNotIn('<p>', result)
+        
+        # Test URL conversion
+        html = '<div>Check https://example.com for info.</div>'
+        result = self.processor._convert_to_evernote_format(html)
+        self.assertIn('<a href="https://example.com" rev="en_rl_none">https://example.com</a>', result)
+        
+        # Test markdown image conversion
+        html = '<div>![[test_image.png]]</div>'
+        result = self.processor._convert_to_evernote_format(html)
+        self.assertIn('<en-media', result)
+        self.assertIn(f'hash="{self.test_image_hash}"', result)
+        
+        # Test list formatting (should NOT wrap in divs)
+        html = '<ul><li>Item 1</li><li>Item 2</li></ul>'
+        result = self.processor._convert_to_evernote_format(html)
+        self.assertIn('<ul><li>Item 1</li><li>Item 2</li></ul>', result)
+        self.assertNotIn('<li><div>', result)
+        
+        # Test metadata removal
+        html = '<div>---</div><div>created: 2024-01-01</div><div>---</div><div>Content</div>'
+        result = self.processor._convert_to_evernote_format(html)
+        self.assertIn('<div>Content</div>', result)
+        self.assertNotIn('created: 2024-01-01', result)
+        
     def test_process_html_to_enml(self):
         """Test the full HTML to ENML conversion process."""
         html = """
@@ -152,9 +192,11 @@ class TestENMLProcessor(unittest.TestCase):
         
         enml, resources = self.processor.process_html_to_enml(html, resource_refs)
         
-        # Check that ENML has proper XML declaration and DOCTYPE
-        self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', enml)
-        self.assertIn('<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">', enml)
+        # Check that ENML is now wrapped in CDATA
+        self.assertIn('<![CDATA[', enml)
+        
+        # Check that inner XML has proper declaration and DOCTYPE (without line breaks)
+        self.assertIn('<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">', enml)
         
         # Check that content is wrapped in en-note
         self.assertIn('<en-note>', enml)
