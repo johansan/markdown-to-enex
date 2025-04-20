@@ -1,0 +1,54 @@
+{
+  "source_directory": "/Users/johan/NotesCode",
+  "output_directory": "/Users/johan/NotesEvernote",
+  "resources_directory": "_resources",
+  "processing_options": {
+    "remove_code_block_markers": true,
+    "convert_inline_code": true,
+    "remove_heading_markers": true,
+    "handle_image_references": true,
+    "process_links": true,
+    "handle_special_chars": true,
+    "preserve_image_markdown": false,
+    "preserve_link_markdown": false,
+    "escape_html_chars": true,
+    "special_char_replacements": {
+      "–": "--",
+      "—": "---",
+      "…": "..."
+    }
+  },
+  "html_options": {
+    "markdown_engine": "auto",
+    "enable_tables": true,
+    "enable_fenced_code": true,
+    "create_full_document": false,
+    "document_title": "Converted Note"
+  },
+  "enml_options": {
+    "clean_html": true,
+    "add_creation_date": true,
+    "add_source_url": false
+  },
+  "resource_options": {
+    "max_resource_size": 52428800,
+    "include_resource_attributes": true,
+    "include_unknown_resources": true
+  },
+  "enex_options": {
+    "add_creation_date": true,
+    "add_update_date": true,
+    "add_source_url": false,
+    "extract_metadata": true,
+    "default_author": "markdown-to-enex",
+    "enex_version": "1.0",
+    "application_name": "markdown-to-enex"
+  },
+  "output_options": {
+    "group_by": "top_folder",
+    "naming_pattern": "{name}.enex",
+    "max_notes_per_file": 500,
+    "progress_reporting": true,
+    "replace_spaces": true
+  }
+}

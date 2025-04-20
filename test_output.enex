@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export3.dtd">
+<en-export export-date="20250420T181129Z" application="markdown-to-enex" version="1.0">
+  <note>
+    <title>test</title>
+    <created>20250420T175414Z</created>
+    <updated>20250420T175414Z</updated>
+    <note-attributes>
+      <author>ENEX Generator Example</author>
+      <source-application>markdown-to-enex</source-application>
+    </note-attributes>
+    <content><en-note><p>Sample Markdown for Testing</p>
+<p>This is a sample markdown file for testing the conversion to ENEX format.</p>
+<p>Features</p>
+<p>Here are some markdown features this converter should handle:</p>
+<ol>
+<li><strong>Bold text</strong> and <em>italic text</em></li>
+<li>Code snippets and inline code</li>
+<li>Links like <a href="https://example.com">this one</a></li>
+</ol>
+<p>Code Blocks</p>
+<p>def hello_world():
+    print(&quot;Hello, World!&quot;)
+    return True</p>
+<p>Images</p>
+<p>Here&#39;s an image reference:</p>
+<p><en-media type="image/jpeg" hash="941a006a3d0d6efabd1bd48ed8f4f896" alt="Sample Image"/></p>
+<p>Special Characters</p>
+<p>Some special characters: — © ®</p>
+<p>Tables</p>
+<table>
+<thead>
+<tr>
+<th>Column 1</th>
+<th>Column 2</th>
+<th>Column 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell 1</td>
+<td>Cell 2</td>
+<td>Cell 3</td>
+</tr>
+<tr>
+<td>Cell 4</td>
+<td>Cell 5</td>
+<td>Cell 6</td>
+</tr>
+</tbody>
+</table>
+<p>That&#39;s it for the test!</p></en-note></content>
+    <resource>
+      <data encoding="base64">U2FtcGxlIEltYWdlIERhdGEK</data>
+      <mime>image/jpeg</mime>
+      <resource-attributes>
+        <file-name>sample.jpg</file-name>
+      </resource-attributes>
+    </resource>
+  </note>
+</en-export>

@@ -1,0 +1,2 @@
+markdown>=3.8.0
+commonmark>=0.9.1
