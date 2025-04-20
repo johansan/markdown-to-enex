@@ -45,7 +45,7 @@
     "application_name": "markdown-to-enex"
   },
   "output_options": {
-    "group_by": "top_folder",
+    "group_by": "full_folder",
     "naming_pattern": "{name}.enex",
     "max_notes_per_file": 500,
     "progress_reporting": true,

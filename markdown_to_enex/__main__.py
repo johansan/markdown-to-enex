@@ -174,7 +174,10 @@ def main():
             output_path = str(output_dir / "notes.enex")
         
         # Determine grouping strategy
-        group_by = "single"
+        # Start with the config value if it exists
+        group_by = config.get("output_options", {}).get("group_by", "single")
+        
+        # Command line arguments override config file
         if args.group_by:
             group_by = args.group_by
         elif args.separate_files:
