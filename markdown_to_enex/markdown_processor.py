@@ -482,7 +482,9 @@ class MarkdownProcessor:
         result = re.sub(r'\[\[([^\]]+)\]\]', process_wiki_link, result)
         
         # Process highlighted text ==text== -> text
-        result = re.sub(r'==([^=]+)==', r'\1', result)
+        # Using word boundaries to preserve spaces around formatting characters
+        result = re.sub(r'==\s*([^=]+?)\s*==', r' \1 ', result)
+        result = re.sub(r'\s{2,}', ' ', result)  # Clean up any double spaces created
         
         # Process strikethrough text ~~text~~ -> text
         result = re.sub(r'~~([^~]+)~~', r'\1', result)
