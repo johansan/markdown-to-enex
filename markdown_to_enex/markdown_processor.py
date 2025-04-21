@@ -295,31 +295,26 @@ class MarkdownProcessor:
         Returns:
             Normalized path relative to resources directory
         """
-        # Remove leading/trailing whitespace
-        path = path.strip()
-        
-        # Handle absolute and relative paths to resources
+        # Preserve as much path information as possible so that downstream
+        # look‑ups can locate files that live inside note‑specific folders
+        # (e.g. "_resources/imagename.jpg").
+
+        # Absolute paths – collapse to filename (we cannot rely on absolute FS
+        # locations when packaging notes).
         if path.startswith('/'):
-            # Absolute path, extract just the filename
-            filename = Path(path).name
-        elif path.startswith('./') or path.startswith('../'):
-            # Relative path, attempt to resolve
-            # This is simplified; might need more complex logic
-            # depending on how your notes reference resources
-            parts = path.split('/')
-            filename = parts[-1]
-        else:
-            # Already just a filename or direct path
-            if '/' in path:
-                # If there's a path separator, extract just the filename
-                filename = Path(path).name
-            else:
-                # Otherwise, it's already just a filename
-                filename = path
-            
-            # Just use the filename as is
-            
-        return filename
+            return Path(path).name
+
+        # Strip leading "./" if present
+        if path.startswith('./'):
+            path = path[2:]
+
+        # For paths containing sub‑folders (have a "/") keep the relative path
+        # so that resource search can respect folder structure.
+        if '/' in path:
+            return path
+
+        # Otherwise it's already just a plain filename – return as‑is.
+        return path
         
     def get_resource_references(self) -> Set[str]:
         """Get the set of resource references found during processing.

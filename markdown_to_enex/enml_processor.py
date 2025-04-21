@@ -82,13 +82,13 @@ class ENMLProcessor:
         # Process resources
         self._prepare_resources(resource_refs)
         
-        # Clean HTML content
-        cleaned_html = self._clean_html(html_content)
+        # Step 1: Replace image & marker references BEFORE cleaning so IDs are retained
+        processed_html = self._process_image_references(html_content)
+
+        # Step 2: Clean HTML content (will not strip needed en-media attributes)
+        processed_html = self._clean_html(processed_html)
         
-        # Process image references
-        processed_html = self._process_image_references(cleaned_html)
-        
-        # Convert to Evernote-style formatting
+        # Step 3: Convert to Evernote-style formatting
         processed_html = self._convert_to_evernote_format(processed_html)
         
         # Wrap in en-note with CDATA and inner XML declaration (without linebreaks)
@@ -309,20 +309,25 @@ class ENMLProcessor:
                     # Get resource info for this image
                     resource_info = self._get_resource_info_for_path(img_ref.path)
                     
-                    if resource_info and 'width' in resource_info and 'height' in resource_info:
-                        width = resource_info['width']
-                        height = resource_info['height']
-                        
-                        # Build the en-media tag (not wrapped in a div)
-                        return (
-                            f'<en-media style="--en-naturalWidth:{width}; --en-naturalHeight:{height};" '
-                            f'alt="{img_ref.alt_text}" height="{height}px" width="{width}px" '
-                            f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
-                        )
-                    elif resource_info:
-                        # We have the resource but couldn't determine dimensions, skip the image
-                        print(f"Skipping image {img_ref.path} - dimensions could not be determined")
-                        return f'<div>[Image skipped (no dimensions): {html.escape(img_ref.path)}]</div>'
+                    if resource_info:
+                        # Determine alt text (use provided alt or derive from filename)
+                        alt_text = img_ref.alt_text.strip() if img_ref.alt_text.strip() else Path(img_ref.path).stem.replace('_', ' ')
+
+                        if 'width' in resource_info and 'height' in resource_info:
+                            width = resource_info['width']
+                            height = resource_info['height']
+                            # Build the en-media tag (not wrapped in a div)
+                            return (
+                                f'<en-media style="--en-naturalWidth:{width}; --en-naturalHeight:{height};" '
+                                f'alt="{alt_text}" height="{height}px" width="{width}px" '
+                                f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+                            )
+                        else:
+                            # Dimensions unavailable – still embed without size attributes
+                            return (
+                                f'<en-media alt="{alt_text}" '
+                                f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+                            )
                     else:
                         return f'<div>[Image not found: {html.escape(img_ref.path)}]</div>'
             
@@ -346,7 +351,7 @@ class ENMLProcessor:
             
             if resource_info and 'width' in resource_info and 'height' in resource_info:
                 # Extract alt attribute
-                alt_match = re.search(r'alt=["\'](.*?)["\']', attrs)
+                alt_match = re.search(r'alt=["\"](.*?)["\"]', attrs)
                 alt = alt_match.group(1) if alt_match else Path(src).stem.replace('_', ' ')
                 
                 # Use dimensions from resource info
@@ -360,9 +365,14 @@ class ENMLProcessor:
                     f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
                 )
             elif resource_info:
-                # We have the resource but couldn't determine dimensions, skip the image
-                print(f"Skipping image {src} - dimensions could not be determined")
-                return f'<div>[Image skipped (no dimensions): {html.escape(src)}]</div>'
+                # Embed without explicit size attributes when dimensions missing
+                alt_match = re.search(r'alt=["\"](.*?)["\"]', attrs)
+                alt = alt_match.group(1).strip() if alt_match and alt_match.group(1).strip() else Path(src).stem.replace('_', ' ')
+
+                return (
+                    f'<en-media alt="{alt}" '
+                    f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+                )
             else:
                 print(f"Warning: Resource not found for image: {src}")
                 return f'<div>[Image not found: {html.escape(src)}]</div>'
@@ -404,6 +414,9 @@ class ENMLProcessor:
         """
         # 1. Convert paragraph tags to div tags (but keep list items as-is)
         result = re.sub(r'<p>(.*?)</p>', r'<div>\1</div>', html_content, flags=re.DOTALL)
+        
+        # 1a. Remove wrapping divs around lone en-media tags so that the media tag is not inside a div
+        result = re.sub(r'<div>\s*(<en-media[^>]+/>)\s*</div>', r'\1', result)
         
         # 2. Convert plain URLs to hyperlinks
         # Find URLs not already in hyperlinks
