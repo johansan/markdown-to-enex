@@ -41,6 +41,9 @@ class MarkdownProcessor:
         # Apply transformations in sequence
         result = content_without_frontmatter
         
+        # Clean problematic Unicode characters
+        result = self.clean_unicode_characters(result)
+        
         # Convert stars to dashes for list items (fix stray em tags)
         result = self.convert_star_lists_to_dashes(result)
         
@@ -263,6 +266,70 @@ class MarkdownProcessor:
         # Match markdown link format: [text](url)
         pattern = r'\[(.*?)\]\((.*?)\)'
         return re.sub(pattern, process_link, content)
+        
+    def clean_unicode_characters(self, content: str) -> str:
+        """Clean problematic Unicode characters from the content.
+        
+        Args:
+            content: The markdown content
+            
+        Returns:
+            Cleaned content
+        """
+        result = content
+        
+        # Replace non-breaking space (0xA0) with regular space
+        result = result.replace('\xa0', ' ')
+        
+        # Clean directional formatting characters
+        characters_to_remove = [
+            '\u200e',  # Left-to-right mark
+            '\u200f',  # Right-to-left mark
+            '\u202a',  # Left-to-right embedding
+            '\u202b',  # Right-to-left embedding
+            '\u202c',  # Pop directional formatting
+            '\u202d',  # Left-to-right override
+            '\u202e',  # Right-to-left override
+            '\u2066',  # Left-to-right isolate
+            '\u2067',  # Right-to-left isolate
+            '\u2068',  # First strong isolate
+            '\u2069',  # Pop directional isolate
+        ]
+        
+        for char in characters_to_remove:
+            result = result.replace(char, '')
+            
+        # Replace various space characters with regular space
+        space_chars = [
+            '\u2000',  # En Quad
+            '\u2001',  # Em Quad
+            '\u2002',  # En Space
+            '\u2003',  # Em Space
+            '\u2004',  # Three-Per-Em Space
+            '\u2005',  # Four-Per-Em Space
+            '\u2006',  # Six-Per-Em Space
+            '\u2007',  # Figure Space
+            '\u2008',  # Punctuation Space
+            '\u2009',  # Thin Space
+            '\u200a',  # Hair Space
+            '\u205f',  # Medium Mathematical Space
+        ]
+        
+        for char in space_chars:
+            result = result.replace(char, ' ')
+            
+        # Zero-width characters to remove
+        zero_width_chars = [
+            '\u200b',  # Zero Width Space
+            '\u200c',  # Zero Width Non-Joiner
+            '\u200d',  # Zero Width Joiner
+            '\ufeff',  # Zero Width No-Break Space (BOM)
+        ]
+        
+        for char in zero_width_chars:
+            result = result.replace(char, '')
+            
+        return result
         
     def handle_special_characters(self, content: str) -> str:
         """Handle special characters based on configuration.
