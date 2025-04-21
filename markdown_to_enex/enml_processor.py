@@ -414,9 +414,39 @@ class ENMLProcessor:
         """
         # 1. Convert paragraph tags to div tags (but keep list items as-is)
         result = re.sub(r'<p>(.*?)</p>', r'<div>\1</div>', html_content, flags=re.DOTALL)
-        
+
         # 1a. Remove wrapping divs around lone en-media tags so that the media tag is not inside a div
         result = re.sub(r'<div>\s*(<en-media[^>]+/>)\s*</div>', r'\1', result)
+
+        # 1b. Split multiline <div> blocks so that each individual line is wrapped in its own <div>
+        #     (except for lines that already represent en-media tags). Blank lines become <div><br/></div>.
+        def _split_multiline_div(match):
+            inner = match.group(1)
+            # Skip splitting if the div already contains list items (preserve <ul>/<ol> structure)
+            if '<li' in inner:
+                return match.group(0)
+            # If there is no newline inside the div we can keep it as-is
+            if '\n' not in inner:
+                return match.group(0)
+
+            lines = inner.split('\n')
+            segments = []
+            for line in lines:
+                stripped = line.strip()
+
+                # Empty line – represent as explicit break div
+                if stripped == "":
+                    segments.append('<div><br/></div>')
+                # en-media line – keep untouched (should not be wrapped)
+                elif stripped.startswith('<en-media'):
+                    segments.append(stripped)
+                else:
+                    # Preserve original whitespace inside the content portion
+                    segments.append(f'<div>{line}</div>')
+            return ''.join(segments)
+
+        # Apply the splitting – DOTALL so that inner contents can include newlines
+        result = re.sub(r'<div>(.*?)</div>', _split_multiline_div, result, flags=re.DOTALL)
         
         # 2. Convert plain URLs to hyperlinks
         # Find URLs not already in hyperlinks
