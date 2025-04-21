@@ -275,11 +275,30 @@ class ENEXGenerator:
         resource_xml += f"      <data encoding=\"base64\">\n{formatted_data}</data>\n"
         resource_xml += f"      <mime>{mime_type}</mime>\n"
         
-        # Add resource attributes if filename exists
+        # Add width and height if available
+        if "width" in resource and "height" in resource:
+            resource_xml += f"      <width>{resource["width"]}</width>\n"
+            resource_xml += f"      <height>{resource["height"]}</height>\n"
+
+        # Add resource attributes
+        has_attributes = False
+        attributes_xml = "      <resource-attributes>\n"
+        
+        # Add timestamp if available
+        if "timestamp" in resource and isinstance(resource["timestamp"], datetime.datetime):
+            timestamp_str = self._format_date(resource["timestamp"])
+            attributes_xml += f"        <timestamp>{timestamp_str}</timestamp>\n"
+            has_attributes = True
+
+        # Add filename if available
         if filename:
-            resource_xml += "      <resource-attributes>\n"
-            resource_xml += f"        <file-name>{saxutils.escape(filename)}</file-name>\n"
-            resource_xml += "      </resource-attributes>\n"
+            attributes_xml += f"        <file-name>{saxutils.escape(filename)}</file-name>\n"
+            has_attributes = True
+
+        attributes_xml += "      </resource-attributes>\n"
+        
+        if has_attributes:
+            resource_xml += attributes_xml
             
         resource_xml += "    </resource>\n"
         

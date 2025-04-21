@@ -5,6 +5,14 @@ import base64
 import uuid
 from pathlib import Path
 from typing import Dict, Any, List, Set, Tuple, Optional
+import datetime
+
+# Add conditional PIL import
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 
 class ResourceHandler:
@@ -244,6 +252,27 @@ class ResourceHandler:
         # Default fallback
         return "application/octet-stream"
     
+    def _get_image_dimensions(self, file_path: Path) -> Optional[Tuple[int, int]]:
+        """Get image dimensions using PIL.
+        
+        Args:
+            file_path: Path to the image file
+            
+        Returns:
+            Tuple of (width, height) in pixels or None if dimensions cannot be determined
+        """
+        if not PIL_AVAILABLE:
+            # Don't print warning here, let caller handle it if needed
+            return None
+            
+        try:
+            with Image.open(file_path) as img:
+                return img.size
+        except Exception as e:
+            # Print a warning but don't stop execution
+            print(f"Warning: Could not read dimensions for image {file_path.name}: {e}")
+            return None
+    
     def _process_resource_file(self, file_path: Path, resource_ref: str) -> Dict[str, Any]:
         """Process a resource file.
         
@@ -255,7 +284,10 @@ class ResourceHandler:
             Resource information dictionary
         """
         # Check file size
-        file_size = file_path.stat().st_size
+        file_stat = file_path.stat()
+        file_size = file_stat.st_size
+        file_timestamp = datetime.datetime.fromtimestamp(file_stat.st_mtime) # Get timestamp
+
         if file_size > self.max_resource_size:
             print(f"Warning: Resource {resource_ref} exceeds maximum size limit ({file_size} bytes)")
             return self._create_placeholder_resource(resource_ref)
@@ -273,15 +305,26 @@ class ResourceHandler:
         # Convert to base64
         data_base64 = base64.b64encode(data).decode('utf-8')
         
-        # Create resource info
-        return {
+        # Create resource info dictionary first
+        resource_info = {
             "data": data_base64,
             "mime": mime_type,
             "hash": md5_hash,
             "filename": file_path.name,
             "size": file_size,
+            "timestamp": file_timestamp, # Add timestamp
             "reference": resource_ref
         }
+
+        # Get dimensions if it's an image
+        if mime_type.startswith('image/'):
+            dimensions = self._get_image_dimensions(file_path)
+            if dimensions:
+                width, height = dimensions
+                resource_info['width'] = width
+                resource_info['height'] = height
+        
+        return resource_info
     
     def _create_placeholder_resource(self, resource_ref: str) -> Dict[str, Any]:
         """Create a placeholder for a missing resource.
