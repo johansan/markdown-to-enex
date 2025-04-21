@@ -455,14 +455,26 @@ class MarkdownProcessor:
         result = content
         
         # Process wiki-style links [[link|text]] -> text
+        # but preserve image links ![[...]] because those need special handling
         def process_wiki_link(match):
             # If there's a pipe, use the text part; otherwise use the whole link
             link_content = match.group(1)
+            
+            # Skip processing for links preceded by an exclamation mark (image links)
+            # We check the character before the match start
+            prefix_pos = max(0, match.start() - 1)
+            if prefix_pos < len(match.string) and match.string[prefix_pos] == '!':
+                # Return the original matched text to preserve it
+                return f"[[{link_content}]]"
+            
+            # Standard wiki link processing
             if '|' in link_content:
                 # Extract the text part (after the pipe)
                 return link_content.split('|')[1]
             return link_content
             
+        # Look for [[...]] but don't include the preceding character in the match
+        # We'll check it in the process_wiki_link function
         result = re.sub(r'\[\[([^\]]+)\]\]', process_wiki_link, result)
         
         # Process highlighted text ==text== -> text
