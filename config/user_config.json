@@ -1,6 +1,6 @@
 {
-  "source_directory": "/Users/johan/NotesCode",
-  "output_directory": "/Users/johan/NotesEvernote",
+  "source_directory": "/Users/johan/Notes",
+  "output_directory": "/Users/johan/Desktop/EvernoteFromObsidian",
   "processing_options": {
     "remove_code_block_markers": true,
     "convert_inline_code": true,
