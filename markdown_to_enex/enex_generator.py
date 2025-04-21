@@ -229,13 +229,13 @@ class ENEXGenerator:
             source_url = saxutils.escape(note["source_url"])
             note_xml += f"      <source-url>{source_url}</source-url>\n"
             
-        # Add source application
-        note_xml += f"      <source-application>{self.application_name}</source-application>\n"
+        # Remove source application
+        # note_xml += f"      <source-application>{self.application_name}</source-application>\n"
         
-        # Add notebook if specified
-        if "notebook" in note and note["notebook"]:
-            notebook = saxutils.escape(note["notebook"])
-            note_xml += f"      <notebook>{notebook}</notebook>\n"
+        # Remove notebook if specified
+        # if "notebook" in note and note["notebook"]:
+        #     notebook = saxutils.escape(note["notebook"])
+        #     note_xml += f"      <notebook>{notebook}</notebook>\n"
             
         note_xml += "    </note-attributes>\n"
         

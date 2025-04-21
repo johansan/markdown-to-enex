@@ -91,8 +91,8 @@ class ENMLProcessor:
         # Step 3: Convert to Evernote-style formatting
         processed_html = self._convert_to_evernote_format(processed_html)
         
-        # Wrap in en-note with CDATA and inner XML declaration (without linebreaks)
-        inner_xml = f'<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>{processed_html}</en-note>'
+        # Wrap in en-note with CDATA and inner XML declaration (with linebreak after XML declaration)
+        inner_xml = f'<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>{processed_html}</en-note>'
         enml_content = f'<![CDATA[{inner_xml}]]>'
         
         # Return ENML content and resources
