@@ -49,21 +49,21 @@ class MarkdownProcessor:
         if self.processing_options.get("convert_inline_code", True):
             result = self.convert_inline_code(result)
             
+        # Handle special characters EARLY so that later injected markers are not escaped
+        if self.processing_options.get("handle_special_chars", True):
+            result = self.handle_special_characters(result)
+            
         # Remove heading markers
         if self.processing_options.get("remove_heading_markers", True):
             result = self.remove_heading_markers(result)
             
-        # Process image references
+        # Process image references (after special char handling so markers are preserved)
         if self.processing_options.get("handle_image_references", True):
             result = self.process_image_references(result)
             
-        # Process links
+        # Process links (after special char handling as well)
         if self.processing_options.get("process_links", True):
             result = self.process_links(result)
-            
-        # Handle special characters
-        if self.processing_options.get("handle_special_chars", True):
-            result = self.handle_special_characters(result)
             
         return result, metadata
         
