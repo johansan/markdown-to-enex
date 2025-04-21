@@ -197,6 +197,11 @@ class MarkdownProcessor:
             # Normalize the path
             normalized_path = self._normalize_resource_path(image_path)
 
+            # If the path is None (returned for URLs like YouTube links), treat it as a regular link
+            if normalized_path is None:
+                # Return a link instead of an image for video URLs
+                return f"<a href=\"{image_path}\">{image_path}</a>"
+
             # Add to tracked references
             if normalized_path:
                 self.image_references.add(normalized_path)
@@ -218,7 +223,7 @@ class MarkdownProcessor:
                 return f"<en-media-marker id=\"{marker_id}\"></en-media-marker>"
 
             # If path couldn't be normalized, return an error message
-            return f"[Image not found: {image_path}]"
+            return f"[Image not found: <a href=\"{image_path}\">{image_path}</a>]"
 
         # Combine patterns: Match ![alt text](path) OR ![[path]]
         # Group 1: alt text (standard)
@@ -293,8 +298,18 @@ class MarkdownProcessor:
             path: The resource path from markdown
             
         Returns:
-            Normalized path relative to resources directory
+            Normalized path relative to resources directory, or None if the path is a URL
         """
+        # Check if the path is a URL (skip URLs like YouTube links which aren't images)
+        if path.startswith(('http://', 'https://', 'www.')):
+            # For YouTube and other video URLs, return None to indicate this isn't an image
+            if 'youtube.com' in path or 'youtu.be' in path or 'vimeo.com' in path:
+                return None
+            
+            # For other URLs, we might still want to process them as potential images
+            # Just return the path as-is for now (downstream processing will attempt to fetch it)
+            return path
+
         # Preserve as much path information as possible so that downstream
         # look‑ups can locate files that live inside note‑specific folders
         # (e.g. "_resources/imagename.jpg").
