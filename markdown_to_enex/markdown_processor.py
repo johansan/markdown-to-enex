@@ -182,20 +182,25 @@ class MarkdownProcessor:
         
         # Function to process each image match
         def process_image(match):
-            alt_text = match.group(1) or ''
-            image_path = match.group(2)
-            
+            # Determine which format was matched
+            if match.group(1) is not None:  # Standard format: ![alt](path)
+                alt_text = match.group(1) or ''
+                image_path = match.group(2)
+            else:  # Wikilink format: ![[path]]
+                alt_text = '' # Wikilinks don't have explicit alt text in this format
+                image_path = match.group(3)
+
             # Generate a unique marker ID
             marker_id = f"IMG_{uuid.uuid4().hex[:8]}"
             position = match.start()
-            
+
             # Normalize the path
             normalized_path = self._normalize_resource_path(image_path)
-            
+
             # Add to tracked references
             if normalized_path:
                 self.image_references.add(normalized_path)
-                
+
                 # Create image reference and add to registry
                 img_ref = ImageRef(
                     path=normalized_path,
@@ -204,19 +209,22 @@ class MarkdownProcessor:
                     position=position
                 )
                 self.image_registry.append(img_ref)
-                
+
                 # If preserving markdown format, return the original markdown
                 if self.processing_options.get("preserve_image_markdown", False):
                     return match.group(0)
-                
+
                 # Return the marker that will be used for later replacement
                 return f"<en-media-marker id=\"{marker_id}\"></en-media-marker>"
-            
+
             # If path couldn't be normalized, return an error message
             return f"[Image not found: {image_path}]"
-            
-        # Match markdown image format: ![alt text](path)
-        pattern = r'!\[(.*?)\]\((.*?)\)'
+
+        # Combine patterns: Match ![alt text](path) OR ![[path]]
+        # Group 1: alt text (standard)
+        # Group 2: path (standard)
+        # Group 3: path (wikilink)
+        pattern = r'!\[(.*?)\]\((.*?)\)|!\[\[([^\]]+)\]\]'
         return re.sub(pattern, process_image, content)
         
     def process_links(self, content: str) -> str:

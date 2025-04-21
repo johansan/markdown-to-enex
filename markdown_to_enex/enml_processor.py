@@ -424,34 +424,8 @@ class ENMLProcessor:
         result = re.sub(r'</div>(?!\s*<)', r'</div><div><br/></div>', result)
         
         # 4. Process markdown image references for remaining unprocessed images
-        # Look for markdown style images: ![[path/to/image.jpg]]
-        def replace_markdown_image(match):
-            img_path = match.group(1)
-            resource_info = None
-            
-            # Try to find resource in our resource map
-            for ref, info in self.resource_map.items():
-                if Path(ref).name == Path(img_path).name:
-                    resource_info = info
-                    break
-            
-            if resource_info:
-                # Calculate image dimensions (default to 440x440 like in the example)
-                width = "440px"
-                height = "440px"
-                alt = Path(img_path).stem.replace('_', ' ')
-                
-                return f'<en-media style="--en-naturalWidth:440; --en-naturalHeight:440;" ' \
-                       f'alt="{alt}" height="{height}" width="{width}" ' \
-                       f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
-            else:
-                return f'<div>[Image not found: {html.escape(img_path)}]</div>'
-                
-        result = re.sub(r'!\[\[([^\]]+)\]\]', replace_markdown_image, result)
-        
-        # 5. Add a <div><br/></div> at the beginning if not already present
-        if not result.startswith('<div><br/></div>'):
-            result = '<div><br/></div>' + result
+        # NOTE: This section is removed as ![[path]] is now handled in MarkdownProcessor
+        # # Look for markdown style images: ![[path/to/image.jpg]]\n        # def replace_markdown_image(match):\n        #     img_path = match.group(1)\n        #     resource_info = None\n        #     \n        #     # Try to find resource in our resource map\n        #     for ref, info in self.resource_map.items():\n        #         if Path(ref).name == Path(img_path).name:\n        #             resource_info = info\n        #             break\n        #     \n        #     if resource_info:\n        #         # Calculate image dimensions (default to 440x440 like in the example)\n        #         width = \"440px\"\n        #         height = \"440px\"\n        #         alt = Path(img_path).stem.replace(\'_\', \' \')\n        #         \n        #         return f\'<en-media style=\"--en-naturalWidth:440; --en-naturalHeight:440;\" \' \\\n        #                f\'alt=\"{alt}\" height=\"{height}\" width=\"{width}\" \' \\\n        #                f\'hash=\"{resource_info[\"hash\"]}\" type=\"{resource_info[\"mime\"]}\" />\'\n        #     else:\n        #         return f\'<div>[Image not found: {html.escape(img_path)}]</div>\'\n        #         \n        # result = re.sub(r\'!\\[\\[([^\\]]+)\\]\\]\', replace_markdown_image, result)\n\n        # 5. Add a <div><br/></div> at the beginning if not already present\n        if not result.startswith(\'<div><br/></div>\'):\n            result = \'<div><br/></div>\' + result\n        
         
         # 6. Add a <div><br/></div> at the end if not already present
         if not result.endswith('<div><br/></div>'):
