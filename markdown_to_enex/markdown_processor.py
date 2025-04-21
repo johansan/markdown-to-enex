@@ -143,9 +143,9 @@ class MarkdownProcessor:
         Returns:
             Content with code block markers removed
         """
-        # Simple pattern matching for test cases
-        pattern = r'```(?:.*?\n)?(.*?)```'
-        return re.sub(pattern, r'\n\1\n', content, flags=re.DOTALL)
+        # Match code blocks and ensure we handle newlines correctly
+        pattern = r'```(?:.*?\n)?(.*?)(?:\n)?```'
+        return re.sub(pattern, r'\1', content, flags=re.DOTALL)
         
     def convert_inline_code(self, content: str) -> str:
         """Convert inline code markers (` `) to plain text.
