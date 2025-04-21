@@ -265,8 +265,14 @@ class ENEXGenerator:
         data_base64 = resource.get("data", "")
         filename = resource.get("filename", "")
         
+        # Format base64 data with line breaks every 76 characters
+        formatted_data = ""
+        chunk_size = 120
+        for i in range(0, len(data_base64), chunk_size):
+            formatted_data += data_base64[i:i+chunk_size] + "\n"
+        
         resource_xml = "    <resource>\n"
-        resource_xml += f"      <data encoding=\"base64\">{data_base64}</data>\n"
+        resource_xml += f"      <data encoding=\"base64\">\n{formatted_data}</data>\n"
         resource_xml += f"      <mime>{mime_type}</mime>\n"
         
         # Add resource attributes if filename exists
