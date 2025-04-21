@@ -4,6 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+- Use virtual environment for all commands
 - Run converter: `python -m markdown_to_enex --source [directory] --output [file.enex]`
 - Test single file: `python -m markdown_to_enex --test-convert [file.md] --output [directory]`
 - Scan only mode: `python -m markdown_to_enex --scan-only --source [directory]`

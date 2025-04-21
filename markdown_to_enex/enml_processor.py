@@ -412,8 +412,19 @@ class ENMLProcessor:
         Returns:
             Converted HTML in Evernote's format
         """
+        # First, preserve the original list structure by temporarily marking list-related tags
+        result = html_content
+        
+        # Preserve list tags by marking them
+        result = result.replace('<ul>', '<!--PRESERVE-UL-->')
+        result = result.replace('</ul>', '<!--PRESERVE-UL-END-->')
+        result = result.replace('<ol>', '<!--PRESERVE-OL-->')
+        result = result.replace('</ol>', '<!--PRESERVE-OL-END-->')
+        result = result.replace('<li>', '<!--PRESERVE-LI-->')
+        result = result.replace('</li>', '<!--PRESERVE-LI-END-->')
+        
         # 1. Convert paragraph tags to div tags (but keep list items as-is)
-        result = re.sub(r'<p>(.*?)</p>', r'<div>\1</div>', html_content, flags=re.DOTALL)
+        result = re.sub(r'<p>(.*?)</p>', r'<div>\1</div>', result, flags=re.DOTALL)
 
         # 1a. Remove wrapping divs around lone en-media tags so that the media tag is not inside a div
         result = re.sub(r'<div>\s*(<en-media[^>]+/>)\s*</div>', r'\1', result)
@@ -422,8 +433,8 @@ class ENMLProcessor:
         #     (except for lines that already represent en-media tags). Blank lines become <div><br/></div>.
         def _split_multiline_div(match):
             inner = match.group(1)
-            # Skip splitting if the div already contains list items (preserve <ul>/<ol> structure)
-            if '<li' in inner:
+            # Skip splitting if the div already contains list or preserve markers
+            if '<!--PRESERVE-' in inner:
                 return match.group(0)
             # If there is no newline inside the div we can keep it as-is
             if '\n' not in inner:
@@ -447,6 +458,14 @@ class ENMLProcessor:
 
         # Apply the splitting – DOTALL so that inner contents can include newlines
         result = re.sub(r'<div>(.*?)</div>', _split_multiline_div, result, flags=re.DOTALL)
+        
+        # Restore the original list tags
+        result = result.replace('<!--PRESERVE-UL-->', '<ul>')
+        result = result.replace('<!--PRESERVE-UL-END-->', '</ul>')
+        result = result.replace('<!--PRESERVE-OL-->', '<ol>')
+        result = result.replace('<!--PRESERVE-OL-END-->', '</ol>')
+        result = result.replace('<!--PRESERVE-LI-->', '<li>')
+        result = result.replace('<!--PRESERVE-LI-END-->', '</li>')
         
         # 2. Convert plain URLs to hyperlinks
         # Find URLs not already in hyperlinks

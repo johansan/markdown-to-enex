@@ -41,6 +41,12 @@ class MarkdownProcessor:
         # Apply transformations in sequence
         result = content_without_frontmatter
         
+        # Convert stars to dashes for list items (fix stray em tags)
+        result = self.convert_star_lists_to_dashes(result)
+        
+        # Remove wiki-links and highlight markers while keeping text
+        result = self.process_wiki_links_and_highlights(result)
+        
         # Remove code block markers
         if self.processing_options.get("remove_code_block_markers", True):
             result = self.remove_code_block_markers(result)
@@ -346,6 +352,56 @@ class MarkdownProcessor:
             List of ImageRef objects
         """
         return self.image_registry
+        
+    def convert_star_lists_to_dashes(self, content: str) -> str:
+        """Convert star-based list items to dash-based list items to prevent stray em tags.
+        
+        Args:
+            content: The markdown content
+            
+        Returns:
+            Content with star list items replaced by dash list items
+        """
+        # Replace * at the beginning of lines with -
+        lines = content.split('\n')
+        processed_lines = []
+        
+        for line in lines:
+            # Only replace if it's a list item (starts with "* " with space after)
+            if line.lstrip().startswith('* '):
+                # Find the index of '*' and replace only that character
+                index = line.find('*')
+                line = line[:index] + '-' + line[index+1:]
+            processed_lines.append(line)
+            
+        return '\n'.join(processed_lines)
+        
+    def process_wiki_links_and_highlights(self, content: str) -> str:
+        """Process wiki-style links and highlighted text.
+        
+        Args:
+            content: The markdown content
+            
+        Returns:
+            Content with wiki-links and highlight markers processed
+        """
+        result = content
+        
+        # Process wiki-style links [[link|text]] -> text
+        def process_wiki_link(match):
+            # If there's a pipe, use the text part; otherwise use the whole link
+            link_content = match.group(1)
+            if '|' in link_content:
+                # Extract the text part (after the pipe)
+                return link_content.split('|')[1]
+            return link_content
+            
+        result = re.sub(r'\[\[([^\]]+)\]\]', process_wiki_link, result)
+        
+        # Process highlighted text ==text== -> text
+        result = re.sub(r'==([^=]+)==', r'\1', result)
+        
+        return result
 
 
 # Function to process a markdown file

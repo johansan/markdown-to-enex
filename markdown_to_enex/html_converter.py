@@ -50,6 +50,9 @@ class HTMLConverter:
         Returns:
             HTML content
         """
+        # Pre-process list patterns to ensure proper list rendering
+        processed_markdown = self._process_text_with_lists(processed_markdown)
+        
         # Convert to HTML using the selected markdown engine
         if self.markdown_engine == "python-markdown":
             html_content = markdown.markdown(
@@ -78,6 +81,35 @@ class HTMLConverter:
             html_content = self._create_html_document(html_content)
             
         return html_content
+        
+    def _process_text_with_lists(self, markdown_content: str) -> str:
+        """Ensure list items are properly formatted for better Markdown conversion.
+        
+        Args:
+            markdown_content: Markdown content to process
+            
+        Returns:
+            Processed markdown with improved list formatting
+        """
+        lines = markdown_content.split('\n')
+        result_lines = []
+        
+        # Add an extra newline before lists to ensure they're recognized as lists
+        for i, line in enumerate(lines):
+            stripped = line.lstrip()
+            
+            # If this is a list item and the previous line wasn't blank,
+            # add a blank line to ensure the list is properly recognized
+            if i > 0 and (stripped.startswith('- ') or stripped.startswith('* ')) and lines[i-1].strip():
+                # Only add a blank line if the previous line isn't already blank
+                # and isn't a list item itself
+                prev_stripped = lines[i-1].lstrip()
+                if not (prev_stripped.startswith('- ') or prev_stripped.startswith('* ')):
+                    result_lines.append('')
+                    
+            result_lines.append(line)
+            
+        return '\n'.join(result_lines)
         
     def _basic_markdown_to_html(self, markdown_content: str) -> str:
         """Provide a basic markdown to HTML conversion using regex.
@@ -190,6 +222,9 @@ class HTMLConverter:
         
         # Italic text: *text* -> <em>text</em>
         result = re.sub(r'(?<!\*)\*([^\*]+)\*(?!\*)', r'<em>\1</em>', result)
+        
+        # We'll process list conversion later in the _process_text_with_lists method instead
+        # This allows us to handle lists in paragraphs more precisely
         
         # Improve table formatting for better ENEX compatibility
         if '<table>' not in result and '|' in result:
