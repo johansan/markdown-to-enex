@@ -1,7 +1,6 @@
 {
   "source_directory": "",
   "output_directory": "",
-  "resources_directory": "_resources",
   "processing_options": {
     "remove_code_block_markers": true,
     "convert_inline_code": true,

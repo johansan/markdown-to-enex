@@ -17,7 +17,6 @@ class ResourceHandler:
             config: Configuration dictionary containing resource handling options
         """
         self.config = config
-        self.resources_dir = Path(config.get("resources_directory", "_resources"))
         self.source_dir = config.get("source_directory", "")
         if self.source_dir:
             self.source_dir = Path(self.source_dir)
@@ -181,8 +180,8 @@ class ResourceHandler:
         """
         # First try direct path
         if self.source_dir:
-            # Look in resources directory relative to source
-            resource_path = self.source_dir / self.resources_dir / resource_ref
+            # Look directly in source directory for the resource
+            resource_path = self.source_dir / resource_ref
             if resource_path.exists():
                 return resource_path
                 
@@ -197,14 +196,14 @@ class ResourceHandler:
             return direct_path
             
         # Check if it's relative to current directory
-        current_path = Path.cwd() / self.resources_dir / resource_ref
+        current_path = Path.cwd() / resource_ref
         if current_path.exists():
             return current_path
             
-        # Try just the filename in resources directory
+        # Try just the filename in source directory
         if self.source_dir:
             filename = Path(resource_ref).name
-            resource_path = self.source_dir / self.resources_dir / filename
+            resource_path = self.source_dir / filename
             if resource_path.exists():
                 return resource_path
                 

@@ -85,8 +85,6 @@ class DirectoryScanner:
             config: Configuration dictionary containing paths and options
         """
         self.source_dir = Path(config.get("source_directory", ""))
-        self.resources_dir_name = config.get("resources_directory", "_resources")
-        self.resources_path = self.source_dir / self.resources_dir_name
         self.resources: Dict[str, Path] = {}
         self.notes: List[Note] = []
         self.directories: Dict[str, List[str]] = {}
@@ -99,9 +97,6 @@ class DirectoryScanner:
         """
         if not self.source_dir.exists() or not self.source_dir.is_dir():
             raise ValueError(f"Source directory does not exist: {self.source_dir}")
-            
-        # First scan for resources
-        self._scan_resources()
         
         # Then scan for markdown files
         self._scan_markdown_files()
@@ -113,26 +108,9 @@ class DirectoryScanner:
         # Return the structured representation
         return self._build_result()
         
-    def _scan_resources(self) -> None:
-        """Scan the resources directory and map all resources."""
-        if not self.resources_path.exists():
-            print(f"Resources directory does not exist: {self.resources_path}")
-            return
-            
-        for resource_path in self.resources_path.glob('**/*'):
-            if resource_path.is_file():
-                # Store with both absolute and relative paths
-                rel_path = str(resource_path.relative_to(self.resources_path))
-                norm_path = os.path.normpath(rel_path)
-                self.resources[norm_path] = resource_path
-        
     def _scan_markdown_files(self) -> None:
         """Recursively scan for markdown files in the source directory."""
         for path in self.source_dir.glob('**/*.md'):
-            # Skip files in the resources directory
-            if str(self.resources_path) in str(path):
-                continue
-                
             rel_path = path.relative_to(self.source_dir)
             note = Note(path, rel_path)
             self.notes.append(note)
@@ -151,7 +129,6 @@ class DirectoryScanner:
         """Build a structured result of the scanning process."""
         return {
             "source_directory": str(self.source_dir),
-            "resources_directory": str(self.resources_path),
             "total_notes": len(self.notes),
             "total_resources": len(self.resources),
             "notes": [note.to_dict() for note in self.notes],

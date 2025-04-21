@@ -1,7 +1,6 @@
 {
   "source_directory": "/Users/johan/NotesCode",
   "output_directory": "/Users/johan/NotesEvernote",
-  "resources_directory": "_resources",
   "processing_options": {
     "remove_code_block_markers": true,
     "convert_inline_code": true,

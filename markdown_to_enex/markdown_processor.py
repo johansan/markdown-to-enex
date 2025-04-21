@@ -14,7 +14,6 @@ class MarkdownProcessor:
         """
         self.config = config
         self.processing_options = config.get("processing_options", {})
-        self.resources_dir = config.get("resources_directory", "_resources")
         self.image_references: Set[str] = set()
         
     def process_markdown(self, content: str) -> Tuple[str, Dict[str, Any]]:
@@ -284,8 +283,7 @@ class MarkdownProcessor:
                 # Otherwise, it's already just a filename
                 filename = path
             
-            # Remove resources directory prefix if present
-            filename = filename.replace(f"{self.resources_dir}/", "")
+            # Just use the filename as is
             
         return filename
         
