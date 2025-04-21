@@ -50,24 +50,33 @@ class HTMLConverter:
         Returns:
             HTML content
         """
+        # Check if the original content ends with a newline
+        original_ends_with_newline = processed_markdown.endswith('\n')
+        
+        # Mark empty lines with placeholders
+        marked_content = self._mark_empty_lines(processed_markdown)
+        
         # Pre-process list patterns to ensure proper list rendering
-        processed_markdown = self._process_text_with_lists(processed_markdown)
+        marked_content = self._process_text_with_lists(marked_content)
         
         # Convert to HTML using the selected markdown engine
         if self.markdown_engine == "python-markdown":
             html_content = markdown.markdown(
-                processed_markdown,
+                marked_content,
                 extensions=self.extensions,
                 output_format='html5'
             )
         elif self.markdown_engine == "commonmark":
             parser = commonmark.Parser()
-            ast = parser.parse(processed_markdown)
+            ast = parser.parse(marked_content)
             renderer = commonmark.HtmlRenderer()
             html_content = renderer.render(ast)
         else:
             # Basic markdown conversion as fallback
-            html_content = self._basic_markdown_to_html(processed_markdown)
+            html_content = self._basic_markdown_to_html(marked_content)
+            
+        # Restore empty lines
+        html_content = self._restore_empty_lines(html_content)
             
         # Apply custom converters for special elements
         for converter in self.custom_converters:
@@ -76,11 +85,41 @@ class HTMLConverter:
         # Apply additional formatting for elements not handled by basic conversion
         html_content = self._convert_basic_formatting(html_content)
         
+        # Remove trailing <div><br/></div> if the original content didn't end with newline
+        if not original_ends_with_newline and html_content.endswith('<div><br/></div>'):
+            html_content = html_content[:-16]
+        
         # Wrap in HTML document structure if needed
         if self.html_options.get("create_full_document", False):
             html_content = self._create_html_document(html_content)
             
         return html_content
+    
+    def _mark_empty_lines(self, content: str) -> str:
+        """Mark empty lines with special placeholders that survive markdown conversion.
+        
+        Args:
+            content: The markdown content
+            
+        Returns:
+            Content with empty lines marked with placeholders
+        """
+        lines = content.split('\n')
+        for i in range(len(lines)):
+            if not lines[i].strip():
+                lines[i] = "<!-- empty-line-placeholder -->"
+        return '\n'.join(lines)
+    
+    def _restore_empty_lines(self, html_content: str) -> str:
+        """Replace empty line placeholders with proper HTML breaks.
+        
+        Args:
+            html_content: HTML content with placeholders
+            
+        Returns:
+            HTML content with proper empty line breaks
+        """
+        return html_content.replace("<!-- empty-line-placeholder -->", "<div><br/></div>")
         
     def _process_text_with_lists(self, markdown_content: str) -> str:
         """Ensure list items are properly formatted for better Markdown conversion.
@@ -127,15 +166,12 @@ class HTMLConverter:
         html_parts = []
         
         for paragraph in paragraphs:
-            if paragraph.strip():
-                # Replace newlines with <br> within paragraphs
-                paragraph = re.sub(r'\n', '<br>\n', paragraph)
-                html_parts.append(f"<p>{paragraph}</p>")
+            # Always process paragraph, even if empty
+            # Replace newlines with <br> within paragraphs
+            paragraph = re.sub(r'\n', '<br>\n', paragraph)
+            html_parts.append(f"<p>{paragraph}</p>")
         
         html_content = ''.join(html_parts)
-        
-        # Fix any empty paragraphs
-        html_content = html_content.replace('<p></p>', '')
         
         return html_content
         
