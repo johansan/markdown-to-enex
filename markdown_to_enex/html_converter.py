@@ -85,10 +85,6 @@ class HTMLConverter:
         # Apply additional formatting for elements not handled by basic conversion
         html_content = self._convert_basic_formatting(html_content)
         
-        # Remove trailing <div><br/></div> if the original content didn't end with newline
-        if not original_ends_with_newline and html_content.endswith('<div><br/></div>'):
-            html_content = html_content[:-16]
-        
         # Wrap in HTML document structure if needed
         if self.html_options.get("create_full_document", False):
             html_content = self._create_html_document(html_content)

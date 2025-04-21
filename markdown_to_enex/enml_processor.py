@@ -483,18 +483,14 @@ class ENMLProcessor:
         
         # 3. Add proper <br/> spacing between content blocks
         # Add <div><br/></div> after each </div> if not followed by another tag
-        result = re.sub(r'</div>(?!\s*<)', r'</div><div><br/></div>', result)
+        # result = re.sub(r'</div>(?!\s*<)', r'</div><div><br/></div>', result)
         
         # 4. Process markdown image references for remaining unprocessed images
         # NOTE: This section is removed as ![[path]] is now handled in MarkdownProcessor
-        # # Look for markdown style images: ![[path/to/image.jpg]]\n        # def replace_markdown_image(match):\n        #     img_path = match.group(1)\n        #     resource_info = None\n        #     \n        #     # Try to find resource in our resource map\n        #     for ref, info in self.resource_map.items():\n        #         if Path(ref).name == Path(img_path).name:\n        #             resource_info = info\n        #             break\n        #     \n        #     if resource_info:\n        #         # Calculate image dimensions (default to 440x440 like in the example)\n        #         width = \"440px\"\n        #         height = \"440px\"\n        #         alt = Path(img_path).stem.replace(\'_\', \' \')\n        #         \n        #         return f\'<en-media style=\"--en-naturalWidth:440; --en-naturalHeight:440;\" \' \\\n        #                f\'alt=\"{alt}\" height=\"{height}\" width=\"{width}\" \' \\\n        #                f\'hash=\"{resource_info[\"hash\"]}\" type=\"{resource_info[\"mime\"]}\" />\'\n        #     else:\n        #         return f\'<div>[Image not found: {html.escape(img_path)}]</div>\'\n        #         \n        # result = re.sub(r\'!\\[\\[([^\\]]+)\\]\\]\', replace_markdown_image, result)\n\n        # 5. Add a <div><br/></div> at the beginning if not already present\n        if not result.startswith(\'<div><br/></div>\'):\n            result = \'<div><br/></div>\' + result\n        
-        
-        # 6. Add a <div><br/></div> at the end if not already present
-        if not result.endswith('<div><br/></div>'):
-            result = result + '<div><br/></div>'
-            
-        # 7. Remove any metadata block at the beginning (content between --- markers)
-        result = re.sub(r'<div>-{3,}</div>.*?<div>-{3,}</div>', '<div><br/></div>', result, flags=re.DOTALL)
+        # # Look for markdown style images: ![[path/to/image.jpg]]\n        # def replace_markdown_image(match):\n        #     img_path = match.group(1)\n        #     resource_info = None\n        #     \n        #     # Try to find resource in our resource map\n        #     for ref, info in self.resource_map.items():\n        #         if Path(ref).name == Path(img_path).name:\n        #             resource_info = info\n        #             break\n        #     \n        #     if resource_info:\n        #         # Calculate image dimensions (default to 440x440 like in the example)\n        #         width = \"440px\"\n        #         height = \"440px\"\n        #         alt = Path(img_path).stem.replace(\'_\', \' \')\n        #         \n        #         return f\'<en-media style=\"--en-naturalWidth:440; --en-naturalHeight:440;\" \' \\\n        #                f\'alt=\"{alt}\" height=\"{height}\" width=\"{width}\" \' \\\n        #                f\'hash=\"{resource_info[\"hash\"]}\" type=\"{resource_info[\"mime\"]}\" />\'\n        #     else:\n        #         return f\'<div>[Image not found: {html.escape(img_path)}]</div>\'\n        #         \n        # result = re.sub(r\'!\\[\\[([^\\]]+)\\]\\]\', replace_markdown_image, result)
+
+        # 5. Remove any metadata block at the beginning (content between --- markers)
+        result = re.sub(r'<div>-{3,}</div>.*?<div>-{3,}</div>', '', result, flags=re.DOTALL)
             
         # Final clean-up
         # Remove empty divs (except those with just <br/>)
