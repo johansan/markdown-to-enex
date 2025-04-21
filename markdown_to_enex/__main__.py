@@ -127,15 +127,15 @@ def main():
             
             try:
                 # Process markdown
-                processed_markdown, resources, frontmatter = process_markdown_file(test_file, config.to_dict())
+                processed_markdown, resources, frontmatter, image_registry = process_markdown_file(test_file, config.to_dict())
                 print(f"Processed markdown and found {len(resources)} resource references")
                 print(f"Extracted metadata: {frontmatter}")
                 
                 # Convert to HTML
                 html_content = convert_markdown_to_html(processed_markdown, config.to_dict())
                 
-                # Process HTML to ENML
-                enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict())
+                # Process HTML to ENML with image registry
+                enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict(), image_registry)
                 
                 # Save the results
                 output_dir = Path(config.get("output_directory", "."))
@@ -228,7 +228,7 @@ def main():
             
             # Process markdown
             try:
-                processed_markdown, resources, frontmatter = process_markdown_file(file_path, config.to_dict())
+                processed_markdown, resources, frontmatter, image_registry = process_markdown_file(file_path, config.to_dict())
                 
                 # Track all resources
                 all_resources.update(resources)
@@ -237,8 +237,8 @@ def main():
                 # Convert to HTML
                 html_content = convert_markdown_to_html(processed_markdown, config.to_dict())
                 
-                # Process HTML to ENML
-                enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict())
+                # Process HTML to ENML with image registry
+                enml_content, _ = process_html_to_enml(html_content, resources, config.to_dict(), image_registry)
                 
                 # Extract metadata from file
                 metadata = extract_note_metadata(file_path, processed_markdown, config.to_dict())

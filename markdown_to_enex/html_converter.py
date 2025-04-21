@@ -108,21 +108,25 @@ class HTMLConverter:
         return html_content
         
     def _convert_image_placeholders(self, html_content: str) -> str:
-        """Convert image placeholders to HTML img tags.
+        """Preserve image markers in HTML.
         
         Args:
-            html_content: HTML content with image placeholders
+            html_content: HTML content with image markers
             
         Returns:
-            HTML with proper img tags
+            HTML with preserved image markers
         """
-        # Convert [[image:path|alt_text]] to <img src="path" alt="alt_text">
+        # Our image markers are already in valid HTML format: <en-media-marker id="..."></en-media-marker>
+        # We just need to make sure they're not modified during HTML processing
+        
+        # If there are any remaining old-style image placeholders, convert them
         pattern = r'\[\[image:(.*?)\|(.*?)\]\]'
         
         def replace_image(match):
             path = match.group(1)
             alt_text = match.group(2)
-            return f'<img src="{path}" alt="{alt_text}">'
+            # Create a placeholder that will be handled later
+            return f'<div>[Image: {alt_text} ({path})]</div>'
             
         return re.sub(pattern, replace_image, html_content)
         

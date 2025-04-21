@@ -2,9 +2,19 @@ import re
 import hashlib
 import base64
 from pathlib import Path
-from typing import Dict, Any, List, Set, Tuple, Optional
+from typing import Dict, Any, List, Set, Tuple, Optional, NamedTuple, TYPE_CHECKING
 from xml.sax.saxutils import escape
 import html
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    
+# Avoid circular imports
+if TYPE_CHECKING:
+    from .markdown_processor import ImageRef
 
 
 class ENMLProcessor:
@@ -41,11 +51,12 @@ class ENMLProcessor:
         'mouseup', 'reset', 'resize', 'scroll', 'select', 'submit', 'unload'
     ]})
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], image_registry: Optional[List[Any]] = None):
         """Initialize the ENML processor.
         
         Args:
             config: Configuration dictionary containing processing options
+            image_registry: Optional list of ImageRef objects for direct image handling
         """
         self.config = config
         
@@ -56,6 +67,7 @@ class ENMLProcessor:
             
         self.resource_map: Dict[str, Dict[str, Any]] = {}
         self.enml_options = config.get("enml_options", {})
+        self.image_registry = image_registry or []
         
     def process_html_to_enml(self, html_content: str, resource_refs: Set[str]) -> Tuple[str, List[Dict[str, Any]]]:
         """Convert HTML content to ENML format suitable for Evernote.
@@ -116,13 +128,24 @@ class ENMLProcessor:
                 # Convert to base64
                 data_base64 = base64.b64encode(data).decode('utf-8')
                 
-                # Store in resource map
-                self.resource_map[resource_ref] = {
+                # Store resource info
+                resource_info = {
                     'data': data_base64,
                     'mime': mime_type,
                     'hash': md5_hash,
                     'filename': resource_path.name
                 }
+                
+                # Get dimensions if it's an image
+                if mime_type.startswith('image/'):
+                    dimensions = self._get_image_dimensions(resource_path)
+                    if dimensions:
+                        width, height = dimensions
+                        resource_info['width'] = width
+                        resource_info['height'] = height
+                
+                # Store in resource map
+                self.resource_map[resource_ref] = resource_info
                 
             except Exception as e:
                 print(f"Error processing resource {resource_ref}: {e}")
@@ -160,6 +183,26 @@ class ENMLProcessor:
             
         return None
     
+    def _get_image_dimensions(self, file_path: Path) -> Optional[Tuple[int, int]]:
+        """Get image dimensions using PIL.
+        
+        Args:
+            file_path: Path to the image file
+            
+        Returns:
+            Tuple of (width, height) in pixels or None if dimensions cannot be determined
+        """
+        if not PIL_AVAILABLE:
+            print(f"PIL not available, cannot determine image dimensions for {file_path}")
+            return None
+            
+        try:
+            with Image.open(file_path) as img:
+                return img.size
+        except Exception as e:
+            print(f"Error getting image dimensions for {file_path}: {e}")
+            return None
+            
     def _get_mime_type(self, file_path: Path) -> str:
         """Determine MIME type for a file based on extension.
         
@@ -248,14 +291,48 @@ class ENMLProcessor:
         return result
     
     def _process_image_references(self, html_content: str) -> str:
-        """Convert HTML img tags to ENML en-media tags.
+        """Convert image markers and HTML img tags to ENML en-media tags.
         
         Args:
-            html_content: HTML content with img tags
+            html_content: HTML content with image markers and img tags
             
         Returns:
             HTML content with en-media tags
         """
+        # First, process the image registry markers
+        def replace_marker(match):
+            marker_id = match.group(1)
+            
+            # Find the corresponding image reference in the registry
+            for img_ref in self.image_registry:
+                if img_ref.marker_id == marker_id:
+                    # Get resource info for this image
+                    resource_info = self._get_resource_info_for_path(img_ref.path)
+                    
+                    if resource_info and 'width' in resource_info and 'height' in resource_info:
+                        width = resource_info['width']
+                        height = resource_info['height']
+                        
+                        # Build the en-media tag (not wrapped in a div)
+                        return (
+                            f'<en-media style="--en-naturalWidth:{width}; --en-naturalHeight:{height};" '
+                            f'alt="{img_ref.alt_text}" height="{height}px" width="{width}px" '
+                            f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+                        )
+                    elif resource_info:
+                        # We have the resource but couldn't determine dimensions, skip the image
+                        print(f"Skipping image {img_ref.path} - dimensions could not be determined")
+                        return f'<div>[Image skipped (no dimensions): {html.escape(img_ref.path)}]</div>'
+                    else:
+                        return f'<div>[Image not found: {html.escape(img_ref.path)}]</div>'
+            
+            # If we couldn't find the marker in the registry
+            return f'<div>[Unknown image marker: {marker_id}]</div>'
+        
+        # Replace markers with en-media tags
+        result = re.sub(r'<en-media-marker id="([^"]+)"></en-media-marker>', replace_marker, html_content)
+        
+        # Then handle any remaining standard img tags (fallback)
         def replace_img(match):
             src = match.group(1)
             attrs = match.group(2) or ''
@@ -265,35 +342,56 @@ class ENMLProcessor:
                 return match.group(0)
                 
             # Get resource info
-            resource_info = self.resource_map.get(src)
+            resource_info = self._get_resource_info_for_path(src)
             
-            if not resource_info:
-                # Try to find by basename
-                src_basename = Path(src).name
-                for ref, info in self.resource_map.items():
-                    if Path(ref).name == src_basename:
-                        resource_info = info
-                        break
-            
-            if resource_info:
-                # Extract width, height, and alt attributes
-                width_match = re.search(r'width=["\'](.*?)["\']', attrs)
-                height_match = re.search(r'height=["\'](.*?)["\']', attrs)
+            if resource_info and 'width' in resource_info and 'height' in resource_info:
+                # Extract alt attribute
                 alt_match = re.search(r'alt=["\'](.*?)["\']', attrs)
+                alt = alt_match.group(1) if alt_match else Path(src).stem.replace('_', ' ')
                 
-                width = f' width="{width_match.group(1)}"' if width_match else ''
-                height = f' height="{height_match.group(1)}"' if height_match else ''
-                alt = f' alt="{alt_match.group(1)}"' if alt_match else ''
+                # Use dimensions from resource info
+                width = resource_info['width']
+                height = resource_info['height']
                 
-                return f'<en-media type="{resource_info["mime"]}" hash="{resource_info["hash"]}"{width}{height}{alt}/>'
+                # Build the en-media tag
+                return (
+                    f'<en-media style="--en-naturalWidth:{width}; --en-naturalHeight:{height};" '
+                    f'alt="{alt}" height="{height}px" width="{width}px" '
+                    f'hash="{resource_info["hash"]}" type="{resource_info["mime"]}" />'
+                )
+            elif resource_info:
+                # We have the resource but couldn't determine dimensions, skip the image
+                print(f"Skipping image {src} - dimensions could not be determined")
+                return f'<div>[Image skipped (no dimensions): {html.escape(src)}]</div>'
             else:
                 print(f"Warning: Resource not found for image: {src}")
-                return f'<span style="color:red;">[Image not found: {html.escape(src)}]</span>'
+                return f'<div>[Image not found: {html.escape(src)}]</div>'
                 
         # Replace img tags
-        result = re.sub(r'<img\s+src=["\'](.*?)["\'](.*?)/?>', replace_img, html_content)
+        result = re.sub(r'<img\s+src=["\'](.*?)["\'](.*?)/?>', replace_img, result)
         
         return result
+        
+    def _get_resource_info_for_path(self, path: str) -> Optional[Dict[str, Any]]:
+        """Get resource info for a given path, trying different ways to match.
+        
+        Args:
+            path: The path to the resource
+            
+        Returns:
+            Resource info dictionary or None if not found
+        """
+        # Direct lookup
+        if path in self.resource_map:
+            return self.resource_map[path]
+            
+        # Try by basename
+        basename = Path(path).name
+        for ref, info in self.resource_map.items():
+            if Path(ref).name == basename:
+                return info
+                
+        return None
     
     def _convert_to_evernote_format(self, html_content: str) -> str:
         """Convert HTML to Evernote's specific format.
@@ -397,16 +495,22 @@ class ENMLProcessor:
         return result
 
 
-def process_html_to_enml(html_content: str, resource_refs: Set[str], config: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]]]:
+def process_html_to_enml(
+    html_content: str, 
+    resource_refs: Set[str], 
+    config: Dict[str, Any],
+    image_registry: Optional[List[Any]] = None
+) -> Tuple[str, List[Dict[str, Any]]]:
     """Convert HTML content to ENML format for ENEX export.
     
     Args:
         html_content: HTML content to process
         resource_refs: Set of resource references found in the content
         config: Configuration dictionary
+        image_registry: Optional list of ImageRef objects for direct image handling
         
     Returns:
         Tuple of (enml_content, resources list)
     """
-    processor = ENMLProcessor(config)
+    processor = ENMLProcessor(config, image_registry)
     return processor.process_html_to_enml(html_content, resource_refs)

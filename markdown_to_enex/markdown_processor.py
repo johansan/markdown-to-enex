@@ -1,6 +1,15 @@
 import re
+import uuid
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Set
+from typing import Dict, List, Any, Optional, Tuple, Set, NamedTuple
+
+
+class ImageRef(NamedTuple):
+    """Represents an image reference found in markdown content."""
+    path: str
+    alt_text: str
+    marker_id: str
+    position: int
 
 
 class MarkdownProcessor:
@@ -15,6 +24,7 @@ class MarkdownProcessor:
         self.config = config
         self.processing_options = config.get("processing_options", {})
         self.image_references: Set[str] = set()
+        self.image_registry: List[ImageRef] = []
         
     def process_markdown(self, content: str) -> Tuple[str, Dict[str, Any]]:
         """Process markdown content applying all transformations.
@@ -158,21 +168,26 @@ class MarkdownProcessor:
         return '\n'.join(processed_lines)
         
     def process_image_references(self, content: str) -> str:
-        """Identify and map image references to their locations in _resources.
+        """Extract image references and replace them with position markers.
         
         Args:
             content: The markdown content
             
         Returns:
-            Content with processed image references
+            Content with image references replaced by markers
         """
-        # Track image references for later use
+        # Reset the image registry and references
+        self.image_registry = []
         self.image_references = set()
         
         # Function to process each image match
         def process_image(match):
             alt_text = match.group(1) or ''
             image_path = match.group(2)
+            
+            # Generate a unique marker ID
+            marker_id = f"IMG_{uuid.uuid4().hex[:8]}"
+            position = match.start()
             
             # Normalize the path
             normalized_path = self._normalize_resource_path(image_path)
@@ -181,13 +196,24 @@ class MarkdownProcessor:
             if normalized_path:
                 self.image_references.add(normalized_path)
                 
-            # If preserving markdown format, return the original markdown
-            if self.processing_options.get("preserve_image_markdown", False):
-                return match.group(0)
+                # Create image reference and add to registry
+                img_ref = ImageRef(
+                    path=normalized_path,
+                    alt_text=alt_text,
+                    marker_id=marker_id,
+                    position=position
+                )
+                self.image_registry.append(img_ref)
                 
-            # Otherwise, prepare for later HTML conversion
-            # Just store the path in a format we can recognize later
-            return f"[[image:{normalized_path}|{alt_text}]]"
+                # If preserving markdown format, return the original markdown
+                if self.processing_options.get("preserve_image_markdown", False):
+                    return match.group(0)
+                
+                # Return the marker that will be used for later replacement
+                return f"<en-media-marker id=\"{marker_id}\"></en-media-marker>"
+            
+            # If path couldn't be normalized, return an error message
+            return f"[Image not found: {image_path}]"
             
         # Match markdown image format: ![alt text](path)
         pattern = r'!\[(.*?)\]\((.*?)\)'
@@ -294,10 +320,18 @@ class MarkdownProcessor:
             Set of resource references
         """
         return self.image_references
+        
+    def get_image_registry(self) -> List[ImageRef]:
+        """Get the image registry with all image references and their markers.
+        
+        Returns:
+            List of ImageRef objects
+        """
+        return self.image_registry
 
 
 # Function to process a markdown file
-def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, Set[str], Dict[str, Any]]:
+def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, Set[str], Dict[str, Any], List[ImageRef]]:
     """Process a markdown file applying transformations.
     
     Args:
@@ -305,7 +339,7 @@ def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, 
         config: Configuration dictionary
         
     Returns:
-        Tuple of (processed_content, resource_references, frontmatter_metadata)
+        Tuple of (processed_content, resource_references, frontmatter_metadata, image_registry)
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -314,7 +348,12 @@ def process_markdown_file(file_path: str, config: Dict[str, Any]) -> Tuple[str, 
         processor = MarkdownProcessor(config)
         processed_content, frontmatter_metadata = processor.process_markdown(content)
         
-        return processed_content, processor.get_resource_references(), frontmatter_metadata
+        return (
+            processed_content,
+            processor.get_resource_references(),
+            frontmatter_metadata,
+            processor.get_image_registry()
+        )
         
     except Exception as e:
         raise RuntimeError(f"Error processing markdown file {file_path}: {e}")
