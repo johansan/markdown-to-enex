@@ -383,6 +383,10 @@ class MarkdownProcessor:
             # Just return the path as-is for now (downstream processing will attempt to fetch it)
             return path
 
+        # Remove size suffix if present (after pipe character)
+        if '|' in path:
+            path = path.split('|')[0]
+
         # Preserve as much path information as possible so that downstream
         # look‑ups can locate files that live inside note‑specific folders
         # (e.g. "_resources/imagename.jpg").
@@ -479,6 +483,9 @@ class MarkdownProcessor:
         
         # Process highlighted text ==text== -> text
         result = re.sub(r'==([^=]+)==', r'\1', result)
+        
+        # Process strikethrough text ~~text~~ -> text
+        result = re.sub(r'~~([^~]+)~~', r'\1', result)
         
         return result
 

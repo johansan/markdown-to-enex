@@ -304,15 +304,23 @@ class ENEXGenerator:
         
         return resource_xml
     
-    def _format_date(self, date: datetime.datetime) -> str:
+    def _format_date(self, date: Any) -> str:
         """Format a date in Evernote's expected format.
         
         Args:
-            date: Datetime object
+            date: Datetime object or string
             
         Returns:
             Formatted date string
         """
+        # Convert string to datetime if needed
+        if isinstance(date, str):
+            try:
+                date = self._parse_date(date)
+            except ValueError:
+                # If parsing fails, use current time
+                date = datetime.datetime.now()
+                
         return date.strftime("%Y%m%dT%H%M%SZ")
         
     def _parse_date(self, date_str: str) -> datetime.datetime:
