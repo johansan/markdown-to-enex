@@ -440,26 +440,9 @@ class ENMLProcessor:
             if '\n' not in inner:
                 return match.group(0)
 
-            # Split by both single and double newlines to ensure proper separation
-            # This is the key fix: use re.split with a regex to treat both \n and \n\n
-            # as valid separators, preserving empty lines between content
-            lines = re.split(r'(\n+)', inner)
-            
+            lines = inner.split('\n')
             segments = []
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-                
-                # Check if this is just a newline separator
-                if re.match(r'\n+', line):
-                    # If it contains two or more consecutive newlines, add an explicit break
-                    # for each complete pair of newlines (representing an empty line)
-                    newline_count = len(line)
-                    for _ in range(newline_count // 2):
-                        segments.append('<div><br/></div>')
-                    i += 1
-                    continue
-                    
+            for line in lines:
                 stripped = line.strip()
 
                 # Empty line – represent as explicit break div
@@ -471,8 +454,6 @@ class ENMLProcessor:
                 else:
                     # Preserve original whitespace inside the content portion
                     segments.append(f'<div>{line}</div>')
-                i += 1
-                
             return ''.join(segments)
 
         # Apply the splitting – DOTALL so that inner contents can include newlines
