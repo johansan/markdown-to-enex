@@ -107,6 +107,10 @@ class ENMLProcessor:
         self.resource_map = {}
         
         for resource_ref in resource_refs:
+            # Skip external URLs - these should be handled as hyperlinks, not as embedded resources
+            if resource_ref.startswith(('http://', 'https://')):
+                continue
+                
             # Find the resource file
             resource_path = self._find_resource_path(resource_ref)
             
