@@ -203,25 +203,13 @@ class MarkdownProcessor:
             marker_id = f"IMG_{uuid.uuid4().hex[:8]}"
             position = match.start()
 
-            # Check if this is an external URL
-            if image_path.startswith(('http://', 'https://', 'www.')):
-                # If it's a media URL (YouTube, etc.), return a link
-                if any(domain in image_path for domain in ['youtube.com', 'youtu.be', 'vimeo.com']):
-                    return f"<a href=\"{image_path}\">{alt_text or image_path}</a>"
-                
-                # For external images, create regular HTML img tag that will be preserved
-                if alt_text:
-                    return f"<img src=\"{image_path}\" alt=\"{alt_text}\" />"
-                else:
-                    return f"<img src=\"{image_path}\" />"
-
             # Normalize the path
             normalized_path = self._normalize_resource_path(image_path)
 
-            # If the path is None (returned for URLs), treat it as a regular link
+            # If the path is None (returned for URLs like YouTube links), treat it as a regular link
             if normalized_path is None:
-                # Return a link instead of an image
-                return f"<a href=\"{image_path}\">{alt_text or image_path}</a>"
+                # Return a link instead of an image for video URLs
+                return f"<a href=\"{image_path}\">{image_path}</a>"
 
             # Add to tracked references
             if normalized_path:
@@ -387,9 +375,13 @@ class MarkdownProcessor:
         """
         # Check if the path is a URL (skip URLs like YouTube links which aren't images)
         if path.startswith(('http://', 'https://', 'www.')):
-            # Return None for all external URLs to prevent them from being processed as resources
-            # This will make sure they're treated as regular links instead
-            return None
+            # For YouTube and other video URLs, return None to indicate this isn't an image
+            if 'youtube.com' in path or 'youtu.be' in path or 'vimeo.com' in path:
+                return None
+            
+            # For other URLs, we might still want to process them as potential images
+            # Just return the path as-is for now (downstream processing will attempt to fetch it)
+            return path
 
         # Remove size suffix if present (after pipe character)
         if '|' in path:

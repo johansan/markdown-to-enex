@@ -56,10 +56,6 @@ class Note:
             all_refs = image_refs + html_refs
             
             for ref in all_refs:
-                # Skip external URLs - these should be handled as hyperlinks, not as resource references
-                if ref.startswith(('http://', 'https://')):
-                    continue
-                    
                 # Convert path to normalized form
                 norm_path = os.path.normpath(ref.strip())
                 self.resource_refs.add(norm_path)
