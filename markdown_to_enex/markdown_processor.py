@@ -438,11 +438,19 @@ class MarkdownProcessor:
         processed_lines = []
         
         for line in lines:
+            # Check for escaped asterisks and preserve them
+            if '\\*' in line:
+                # Replace escaped asterisks with a temporary marker
+                line = line.replace('\\*', '__ESCAPED_ASTERISK__')
+            
             # Only replace if it's a list item (starts with "* " with space after)
             if line.lstrip().startswith('* '):
                 # Find the index of '*' and replace only that character
                 index = line.find('*')
                 line = line[:index] + '-' + line[index+1:]
+            
+            # Restore escaped asterisks
+            line = line.replace('__ESCAPED_ASTERISK__', '*')
             processed_lines.append(line)
             
         return '\n'.join(processed_lines)
