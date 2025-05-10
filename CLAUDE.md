@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Purpose
+
+This tool converts Obsidian-style markdown files into Evernote ENEX format, with special processing to ensure compatibility with Apple Notes. Apple Notes has limitations when importing ENEX files, and this tool addresses those limitations.
+
 ## Commands
 
 - Use virtual environment for all commands
@@ -27,15 +31,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **Configuration**: Load settings from default and user config files
 2. **Scanning**: Scan source directory for markdown files and resources
 3. **Markdown Processing**: For each note:
-   - Extract frontmatter metadata
+   - Extract frontmatter metadata (only creation date is used)
    - Clean problematic Unicode characters
-   - Convert star lists to dashes
-   - Process wiki-links and highlights
+   - Extract and protect code blocks for preservation
+   - Convert star lists to dashes to prevent unwanted formatting
+   - Process wiki-links and remove highlights while preserving text
    - Handle special characters
    - Process image references
 4. **HTML Conversion**: Convert processed markdown to HTML
    - Apply proper list formatting
    - Format tables and other elements
+   - Replace horizontal rules with em dash dividers
+   - Process code blocks to remove styling but preserve content
 5. **ENML Processing**: Convert HTML to Evernote's ENML format
    - Process and preserve list structure
    - Convert HTML tags to Evernote-compatible format

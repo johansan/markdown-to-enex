@@ -2,15 +2,21 @@
 
 ## Project Description
 
-markdown-to-enex is a Python utility that converts Obsidian Markdown files to Evernote's ENEX format. This tool helps users migrate their Markdown-based notes to Evernote while preserving formatting, links, images, and metadata.
+markdown-to-enex is a Python utility that converts Obsidian Markdown files to Evernote's ENEX format. This tool is specifically designed to ensure compatibility with Apple Notes, which has limitations when importing ENEX files.
 
 ### Key Features
 
-- Converts Markdown files to Evernote-compatible ENEX format
-- Preserves note metadata through frontmatter
-- Handles images and attachments
-- Processes wiki-style links and special formatting
-- Supports batch conversion of entire directories
+- Converts Obsidian markdown files into ENEX format
+- Special processing for Apple Notes compatibility:
+  - Code block styling is removed but content is preserved with proper line-by-line formatting
+  - Horizontal rules are converted to simple em dashes
+  - Header styling is removed while preserving the heading text
+  - Highlight formatting is removed while preserving the text
+  - Handles Obsidian-style wiki links and image references
+  - Lists with asterisks are converted to use dashes to prevent unwanted formatting
+- Frontmatter handling (only creation date is preserved)
+- Handles image resources and embeds them in the ENEX file
+- Groups notes by folder structure
 - Configurable through JSON configuration files
 
 ## Commands
@@ -38,15 +44,18 @@ markdown-to-enex is a Python utility that converts Obsidian Markdown files to Ev
 1. **Configuration**: Load settings from default and user config files
 2. **Scanning**: Scan source directory for markdown files and resources
 3. **Markdown Processing**: For each note:
-   - Extract frontmatter metadata
+   - Extract frontmatter metadata (only creation date is used)
    - Clean problematic Unicode characters
-   - Convert star lists to dashes
-   - Process wiki-links and highlights
+   - Extract and protect code blocks for preservation
+   - Convert star lists to dashes to prevent unwanted formatting
+   - Process wiki-links and remove highlights while preserving text
    - Handle special characters
    - Process image references
 4. **HTML Conversion**: Convert processed markdown to HTML
    - Apply proper list formatting
    - Format tables and other elements
+   - Replace horizontal rules with em dash dividers
+   - Process code blocks to remove styling but preserve content
 5. **ENML Processing**: Convert HTML to Evernote's ENML format
    - Process and preserve list structure
    - Convert HTML tags to Evernote-compatible format
@@ -91,6 +100,8 @@ python -m markdown_to_enex --scan-only --source ./my_notes
 - **Unicode errors**: Check for problematic characters in source files
 - **Conversion failures**: Use `--verbose` flag for detailed logging
 - **Import errors**: Verify all dependencies are installed in your virtual environment
+- **Apple Notes import issues**: Verify the ENEX file doesn't contain unsupported elements like raw code blocks
+- **Formatting issues**: Use --test-convert to view the HTML output and diagnose formatting problems
 
 ## Contributing
 
