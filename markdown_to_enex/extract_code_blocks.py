@@ -32,9 +32,9 @@ def extract_code_blocks(markdown_content: str) -> Tuple[str, Dict[str, str]]:
             "content": block_content
         }
         
-        # Return a marker with minimal spacing
-        # No preceding newline, only one following newline
-        return f"{block_id}\n"
+        # Return a marker without any newlines
+        # This should prevent extra line breaks around code blocks
+        return block_id
     
     # Match fenced code blocks ```lang\ncontent```
     pattern = r'```(.*?)\n(.*?)```'
