@@ -1,10 +1,10 @@
-# Markdown to ENEX Converter
+# Markdown to ENEX Converter for Apple Notes
 
-A tool for converting Obsidian-style markdown files into Evernote ENEX format, with special processing to ensure compatibility with Apple Notes.
+A tool for converting Obsidian-style markdown files into Evernote ENEX format so they can be imported into Apple Notes, with special processing to ensure maximum compatibility.
 
 ## Features
 
-- Converts Obsidian markdown files into ENEX format
+- Converts Obsidian markdown files into ENEX format for Apple Notes import
 - Special processing for Apple Notes compatibility:
   - Code block styling is removed (Apple Notes cannot import code blocks) but content is preserved with proper line-by-line formatting
   - Horizontal rules are converted to simple text dividers (em dashes) as Apple Notes cannot import horizontal rules
@@ -136,6 +136,7 @@ To work around these limitations, this converter:
 3. Converts markdown to HTML with special handling for code blocks
 4. Converts HTML to ENEX format with embedded resources
 5. Generates ENEX files grouped by your preferred organization method
+6. The ENEX files can then be imported into Apple Notes
 
 ## Contributing
 
