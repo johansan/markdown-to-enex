@@ -71,23 +71,26 @@ class ENMLProcessor:
         
     def process_html_to_enml(self, html_content: str, resource_refs: Set[str]) -> Tuple[str, List[Dict[str, Any]]]:
         """Convert HTML content to ENML format suitable for Evernote.
-        
+
         Args:
             html_content: HTML content to process
             resource_refs: Set of resource references found in the content
-            
+
         Returns:
             Tuple of (enml_content, resources list)
         """
         # Process resources
         self._prepare_resources(resource_refs)
-        
+
         # Step 1: Replace image & marker references BEFORE cleaning so IDs are retained
         processed_html = self._process_image_references(html_content)
 
         # Step 2: Clean HTML content (will not strip needed en-media attributes)
         processed_html = self._clean_html(processed_html)
-        
+
+        # Step 2.5: Replace horizontal rules with text-based separators for Apple Notes compatibility
+        processed_html = self._replace_horizontal_rules(processed_html)
+
         # Step 3: Convert to Evernote-style formatting
         processed_html = self._convert_to_evernote_format(processed_html)
         
@@ -403,12 +406,33 @@ class ENMLProcessor:
                 
         return None
     
+    def _replace_horizontal_rules(self, html_content: str) -> str:
+        """Replace horizontal rule elements with text-based separators for Apple Notes compatibility.
+
+        Args:
+            html_content: HTML content that may contain hr elements
+
+        Returns:
+            HTML with hr elements replaced by text-based separators
+        """
+        import re
+
+        # Create a text-based horizontal line using em dashes
+        horizontal_line = '<div style="text-align: center; margin: 10px 0;">—————————————————</div>'
+
+        # Replace all forms of hr tags with the text-based separator
+        # Match <hr>, <hr/>, <hr /> with any attributes
+        hr_pattern = r'<hr[^>]*/?>'
+        result = re.sub(hr_pattern, horizontal_line, html_content)
+
+        return result
+
     def _convert_to_evernote_format(self, html_content: str) -> str:
         """Convert HTML to Evernote's specific format.
-        
+
         Args:
             html_content: HTML content to convert
-            
+
         Returns:
             Converted HTML in Evernote's format
         """

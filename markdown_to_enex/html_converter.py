@@ -354,15 +354,42 @@ class HTMLConverter:
         return html_document
 
 
+def replace_horizontal_rules(html_content: str) -> str:
+    """Replace horizontal rule elements with text-based separators for Apple Notes compatibility.
+
+    Args:
+        html_content: HTML content that may contain hr elements
+
+    Returns:
+        HTML with hr elements replaced by text-based separators
+    """
+    import re
+
+    # Create a simple text-based horizontal line with a single em dash
+    horizontal_line = '<div>—</div>'
+
+    # Replace all forms of hr tags with the text-based separator
+    # Match <hr>, <hr/>, <hr /> with any attributes
+    hr_pattern = r'<hr[^>]*/?>'
+    result = re.sub(hr_pattern, horizontal_line, html_content)
+
+    return result
+
 def convert_markdown_to_html(markdown_content: str, config: Dict[str, Any]) -> str:
     """Convert markdown content to HTML.
-    
+
     Args:
         markdown_content: Processed markdown content
         config: Configuration dictionary
-        
+
     Returns:
         HTML content
     """
     converter = HTMLConverter(config)
-    return converter.convert_to_html(markdown_content)
+    html_content = converter.convert_to_html(markdown_content)
+
+    # Apply horizontal rule replacement directly in the HTML converter
+    # This ensures it works when using test-convert
+    html_content = replace_horizontal_rules(html_content)
+
+    return html_content
