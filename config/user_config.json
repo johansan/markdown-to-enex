@@ -46,7 +46,7 @@
   "output_options": {
     "group_by": "full_folder",
     "naming_pattern": "{name}.enex",
-    "max_notes_per_file": 500,
+    "max_notes_per_file": 0,
     "progress_reporting": true,
     "replace_spaces": true
   }

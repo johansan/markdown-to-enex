@@ -6,12 +6,15 @@ A tool for converting Obsidian-style markdown files into Evernote ENEX format, w
 
 - Converts Obsidian markdown files into ENEX format
 - Special processing for Apple Notes compatibility:
-  - Code blocks are preserved with proper line formatting
-  - Horizontal rules are converted to simple text dividers (em dashes)
-  - Header markers are removed while preserving the heading text
+  - Code block styling is removed (Apple Notes cannot import code blocks) but content is preserved with proper line-by-line formatting
+  - Horizontal rules are converted to simple text dividers (em dashes) as Apple Notes cannot import horizontal rules
+  - Header styling is removed (Apple Notes cannot import header styles) while preserving the heading text
   - Handles Obsidian-style wiki links (`[[link]]`) and image references (`![[image.jpg]]`)
   - Lists with asterisks are converted to use dashes to prevent unwanted formatting
-- Preserves frontmatter metadata (title, tags, creation date)
+- Frontmatter handling:
+  - Only creation date is preserved from frontmatter
+  - If creation date is not found in frontmatter, file creation date is used
+  - Other frontmatter metadata is not preserved
 - Handles image resources and embeds them in the ENEX file
 - Groups notes by folder structure
 
@@ -61,11 +64,19 @@ The converter can be configured using JSON configuration files in the `config` d
 
 ## Note for Apple Notes Users
 
-This tool is specifically designed to create ENEX files that are compatible with Apple Notes import. It handles several formatting issues to ensure your notes appear correctly after import:
+This tool is specifically designed to create ENEX files that are compatible with Apple Notes import, which has limitations when importing ENEX files. Apple Notes cannot import:
 
-1. Code blocks are formatted with individual lines wrapped in divs
-2. Horizontal rules are replaced with em dash dividers
-3. Special characters are properly escaped
+1. Code block styling (code blocks appear as regular text)
+2. Header styling (headers appear as regular text)
+3. Horizontal rules (these are replaced with em dashes)
+4. Many forms of rich text formatting
+
+To work around these limitations, this converter:
+1. Removes code block styling but preserves content with line-by-line div formatting
+2. Removes header formatting but keeps the text intact
+3. Converts horizontal rules to simple em dash dividers
+4. Ensures special characters are properly escaped for maximum compatibility
+5. Only preserves creation date from frontmatter (other metadata is lost)
 
 ## How It Works
 
