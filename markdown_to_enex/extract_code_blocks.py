@@ -32,8 +32,9 @@ def extract_code_blocks(markdown_content: str) -> Tuple[str, Dict[str, str]]:
             "content": block_content
         }
         
-        # Return a marker that won't be processed by markdown
-        return f"\n\n{block_id}\n\n"
+        # Return a marker with minimal spacing
+        # No preceding newline, only one following newline
+        return f"{block_id}\n"
     
     # Match fenced code blocks ```lang\ncontent```
     pattern = r'```(.*?)\n(.*?)```'
@@ -71,7 +72,15 @@ def restore_code_blocks(content: str, code_blocks: Dict[str, Dict[str, str]]) ->
 
         # Split the content by lines and wrap each line in a div
         wrapped_lines = []
-        for line in escaped_content.split('\n'):
+        lines = escaped_content.split('\n')
+
+        # Process all lines except potentially the last one
+        for i, line in enumerate(lines):
+            # Skip adding an empty div for the last line if it's empty
+            # This avoids extra line breaks at the end of code blocks
+            if i == len(lines) - 1 and not line.strip() and i > 0:
+                continue
+
             # Empty lines need a <br/> tag
             if not line.strip():
                 wrapped_lines.append('<div><br/></div>')
