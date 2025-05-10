@@ -229,3 +229,4 @@ pyrightconfig.json
 
 # Project specific exclusions
 news_images/
+**/.claude/settings.local.json

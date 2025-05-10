@@ -3,6 +3,8 @@ import uuid
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Set, NamedTuple
 
+from .extract_code_blocks import extract_code_blocks, restore_code_blocks
+
 
 class ImageRef(NamedTuple):
     """Represents an image reference found in markdown content."""
@@ -41,6 +43,9 @@ class MarkdownProcessor:
         # Apply transformations in sequence
         result = content_without_frontmatter
         
+        # Extract code blocks first to protect them from processing
+        result, code_blocks = extract_code_blocks(result)
+        
         # Clean problematic Unicode characters
         result = self.clean_unicode_characters(result)
         
@@ -50,10 +55,6 @@ class MarkdownProcessor:
         # Remove wiki-links and highlight markers while keeping text
         result = self.process_wiki_links_and_highlights(result)
         
-        # Remove code block markers
-        if self.processing_options.get("remove_code_block_markers", True):
-            result = self.remove_code_block_markers(result)
-            
         # Convert inline code
         if self.processing_options.get("convert_inline_code", True):
             result = self.convert_inline_code(result)
@@ -73,6 +74,9 @@ class MarkdownProcessor:
         # Process links (after special char handling as well)
         if self.processing_options.get("process_links", True):
             result = self.process_links(result)
+        
+        # Restore code blocks with their original content
+        result = restore_code_blocks(result, code_blocks)
             
         return result, metadata
         
@@ -143,6 +147,8 @@ class MarkdownProcessor:
         Returns:
             Content with code block markers removed
         """
+        # This method is now deprecated in favor of extract_code_blocks
+        # But we keep it for backward compatibility
         # Match code blocks and ensure we handle newlines correctly
         pattern = r'```(?:.*?\n)?(.*?)(?:\n)?```'
         return re.sub(pattern, r'\1', content, flags=re.DOTALL)
@@ -192,10 +198,10 @@ class MarkdownProcessor:
         # Function to process each image match
         def process_image(match):
             # Determine which format was matched
-            if match.group(1) is not None:  # Standard format: ![alt](path)
+            if match.group(1) is not None:  # Standard format: \![alt](path)
                 alt_text = match.group(1) or ''
                 image_path = match.group(2)
-            else:  # Wikilink format: ![[path]]
+            else:  # Wikilink format: \![[path]]
                 alt_text = '' # Wikilinks don't have explicit alt text in this format
                 image_path = match.group(3)
 
@@ -234,11 +240,11 @@ class MarkdownProcessor:
             # If path couldn't be normalized, return an error message
             return f"[Image not found: <a href=\"{image_path}\">{image_path}</a>]"
 
-        # Combine patterns: Match ![alt text](path) OR ![[path]]
+        # Combine patterns: Match \![alt text](path) OR \![[path]]
         # Group 1: alt text (standard)
         # Group 2: path (standard)
         # Group 3: path (wikilink)
-        pattern = r'!\[(.*?)\]\((.*?)\)|!\[\[([^\]]+)\]\]'
+        pattern = r'\!\[(.*?)\]\((.*?)\)|\!\[\[([^\]]+)\]\]'
         return re.sub(pattern, process_image, content)
         
     def process_links(self, content: str) -> str:
@@ -467,7 +473,7 @@ class MarkdownProcessor:
         result = content
         
         # Process wiki-style links [[link|text]] -> text
-        # but preserve image links ![[...]] because those need special handling
+        # but preserve image links \![[...]] because those need special handling
         def process_wiki_link(match):
             # If there's a pipe, use the text part; otherwise use the whole link
             link_content = match.group(1)

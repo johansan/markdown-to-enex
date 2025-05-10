@@ -14,18 +14,18 @@ class HTMLConverter:
     
     def __init__(self, config: Dict[str, Any]):
         """Initialize the HTML converter.
-        
+
         Args:
             config: Configuration dictionary containing HTML conversion options
         """
         self.config = config
         self.html_options = config.get("html_options", {})
-        
+
         # Determine which markdown library to use
         self.markdown_engine = self.html_options.get("markdown_engine", "python-markdown")
         if self.markdown_engine == "auto":
             self.markdown_engine = "python-markdown"
-                
+
         # Initialize extensions based on config
         self.extensions = []
         if self.markdown_engine == "python-markdown":
@@ -33,12 +33,13 @@ class HTMLConverter:
                 self.extensions.append(TableExtension())
             if self.html_options.get("enable_fenced_code", True):
                 self.extensions.append(FencedCodeExtension())
-                
+
         # Add custom converters for special markdown elements
         self.custom_converters = [
             self._convert_image_placeholders,
             self._convert_link_placeholders,
-            self._fix_html_entities
+            self._fix_html_entities,
+            self._process_code_blocks  # Add new processor for code blocks
         ]
         
     def convert_to_html(self, processed_markdown: str) -> str:
@@ -215,10 +216,10 @@ class HTMLConverter:
         
     def _fix_html_entities(self, html_content: str) -> str:
         """Fix HTML entities to ensure they're properly encoded.
-        
+
         Args:
             html_content: HTML content that may contain entities
-            
+
         Returns:
             HTML with properly encoded entities
         """
@@ -230,12 +231,51 @@ class HTMLConverter:
             '&amp;quot;': '&quot;',
             '&amp;apos;': '&apos;'
         }
-        
+
         result = html_content
-        
+
         for entity, replacement in entities_to_replace.items():
             result = result.replace(entity, replacement)
-            
+
+        return result
+
+    def _process_code_blocks(self, html_content: str) -> str:
+        """Process code blocks to preserve special characters like asterisks.
+
+        This function finds all <pre><code> blocks in the HTML and ensures that
+        characters like * aren't converted to formatting tags.
+
+        Args:
+            html_content: HTML content that may contain code blocks
+
+        Returns:
+            HTML with code blocks processed to preserve special characters
+        """
+        import re
+
+        def handle_code_block(match):
+            # Extract the code content
+            code_content = match.group(1)
+
+            # Remove the surrounding code/pre tags as we'll process the raw content
+            # and turn it into non-HTML formatted text in the final document
+
+            # If we want to preserve some formatting but ensure * characters don't
+            # trigger formatting, we could just replace * with a special character
+            # and convert it back in the ENML processor
+
+            # For now, we'll simply return the raw content without the <pre><code> tags
+            # Evernote will display it as plain text, preserving all special characters
+            return code_content
+
+        # Find all <pre><code>...</code></pre> blocks and process them
+        pattern = r'<pre><code>(.*?)</code></pre>'
+        result = re.sub(pattern, handle_code_block, html_content, flags=re.DOTALL)
+
+        # Also process inline code to ensure consistency
+        inline_pattern = r'<code>(.*?)</code>'
+        result = re.sub(inline_pattern, r'\1', result, flags=re.DOTALL)
+
         return result
         
     def _convert_basic_formatting(self, html_content: str) -> str:
